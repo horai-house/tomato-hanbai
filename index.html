@@ -683,6 +683,28 @@
     margin-bottom:12px;
   }
 
+  /* 折りたたみヘッダー */
+  .card-toggle-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    cursor:pointer;
+    user-select:none;
+  }
+  .toggle-icon{
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink-soft);
+    background:var(--paper);
+    padding:4px 10px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    transition:transform 0.2s ease;
+  }
+  .toggle-icon.open{
+    transform:rotate(180deg);
+  }
+
   .footnote{
     text-align:center;
     font-size:11.5px;
@@ -702,9 +724,10 @@
 <script>
 (function(){
 
-  var SMALL_PRICE = 50;   // 小玉トマト 1個あたり
-  var LARGE_PRICE = 100;  // 大玉トマト 1個あたり
-  var ADMIN_PASSCODE = "9999"; // 管理者パスコード（必要に応じて変更してください）
+  var SMALL_PRICE = 50;     // 小玉トマト 1個あたり
+  var LARGE_PRICE = 100;    // 大玉トマト 1個あたり
+  var PACK5_PRICE = 100;    // 5個100円トマト 1セット(パック)あたり
+  var ADMIN_PASSCODE = "9999"; // 管理者パスコード
 
   var state = {
     employeeNo: null,
@@ -714,6 +737,7 @@
     loading: true,
     small: 0,
     large: 0,
+    pack5: 0,
     loginMode: 'employee', // 'employee' | 'admin'
     loginError: "",
     showStamp: false,
@@ -723,8 +747,10 @@
     editingId: null,
     editSmall: 0,
     editLarge: 0,
+    editPack5: 0,
     editError: "",
     // 社員マスタ編集
+    isEmpCardOpen: false, // デフォルトで折りたたみ状態
     empTab: 'list',      // 'list' | 'upload'
     empSearch: '',       // 検索文字列
     empEditingNo: null,  // 編集中の社員No.（null=なし）
@@ -855,15 +881,16 @@
   }
 
   function amountOf(p){
-    return p.small * SMALL_PRICE + p.large * LARGE_PRICE;
+    return (p.small || 0) * SMALL_PRICE + (p.large || 0) * LARGE_PRICE + (p.pack5 || 0) * PACK5_PRICE;
   }
 
   function aggregate(purchases){
     var map = {};
     purchases.forEach(function(p){
-      if(!map[p.employeeNo]) map[p.employeeNo] = {employeeNo:p.employeeNo, small:0, large:0, amount:0};
-      map[p.employeeNo].small += p.small;
-      map[p.employeeNo].large += p.large;
+      if(!map[p.employeeNo]) map[p.employeeNo] = {employeeNo:p.employeeNo, small:0, large:0, pack5:0, amount:0};
+      map[p.employeeNo].small += (p.small || 0);
+      map[p.employeeNo].large += (p.large || 0);
+      map[p.employeeNo].pack5 += (p.pack5 || 0);
       map[p.employeeNo].amount += amountOf(p);
     });
     var arr = Object.keys(map).map(function(k){ return map[k]; });
@@ -1001,6 +1028,7 @@
     state.employeeNo = v;
     state.small = 0;
     state.large = 0;
+    state.pack5 = 0;
     render();
   }
 
@@ -1038,14 +1066,14 @@
     }
 
     var myPurchases = state.purchases.filter(function(p){ return p.employeeNo === state.employeeNo; });
-    var myTotalQty = myPurchases.reduce(function(s,p){ return s + p.small + p.large; }, 0);
+    var myTotalQty = myPurchases.reduce(function(s,p){ return s + (p.small||0) + (p.large||0) + (p.pack5||0); }, 0);
     var myTotalAmount = myPurchases.reduce(function(s,p){ return s + amountOf(p); }, 0);
 
     // stats
     var statsRow = el('div', {class:'stats-row'});
     var s1 = el('div', {class:'stat-card'});
-    s1.appendChild(el('div', {class:'stat-num display', text: myTotalQty + '個'}));
-    s1.appendChild(el('div', {class:'stat-label', text:'自分の購入数'}));
+    s1.appendChild(el('div', {class:'stat-num display', text: myTotalQty + '点'}));
+    s1.appendChild(el('div', {class:'stat-label', text:'自分の購入点数'}));
     var s2 = el('div', {class:'stat-card'});
     s2.appendChild(el('div', {class:'stat-num display', text: myTotalAmount.toLocaleString() + '円'}));
     s2.appendChild(el('div', {class:'stat-label', text:'自分の合計金額'}));
@@ -1056,7 +1084,7 @@
     // purchase card
     var buyCard = el('div', {class:'card'});
     buyCard.appendChild(el('h2', {class:'card-title display', text:'トマトを購入する'}));
-    buyCard.appendChild(el('p', {class:'card-sub', text:'サイズごとに個数を選んでください'}));
+    buyCard.appendChild(el('p', {class:'card-sub', text:'種類ごとに個数・セット数を選んでください'}));
 
     buyCard.appendChild(buildSizeBlock('小玉トマト', SMALL_PRICE, state.small, function(){
       if(state.small>0){ state.small--; render(); }
@@ -1068,15 +1096,20 @@
     }, function(){
       state.large++; render();
     }));
+    buyCard.appendChild(buildSizeBlock('5個100円トマト', PACK5_PRICE, state.pack5, function(){
+      if(state.pack5>0){ state.pack5--; render(); }
+    }, function(){
+      state.pack5++; render();
+    }, 'セット'));
 
-    var subtotal = state.small*SMALL_PRICE + state.large*LARGE_PRICE;
+    var subtotal = state.small*SMALL_PRICE + state.large*LARGE_PRICE + state.pack5*PACK5_PRICE;
     var subRow = el('div', {class:'subtotal-row'});
     subRow.appendChild(el('span', {class:'subtotal-label', text:'小計'}));
     subRow.appendChild(el('span', {class:'subtotal-value display', text: subtotal.toLocaleString() + '円'}));
     buyCard.appendChild(subRow);
 
     var buyBtn = el('button', {class:'btn buy-btn', text:'購入する'});
-    if(state.small===0 && state.large===0) buyBtn.disabled = true;
+    if(state.small===0 && state.large===0 && state.pack5===0) buyBtn.disabled = true;
     buyBtn.addEventListener('click', handlePurchase);
     buyCard.appendChild(buyBtn);
     wrap.appendChild(buyCard);
@@ -1088,8 +1121,9 @@
     }
     var selectedMyPeriod = myPeriods.filter(function(p){ return p.key === state.selectedMyPeriodKey; })[0];
     var myPeriodPurchases = myPurchases.filter(function(p){ return p.timestamp >= selectedMyPeriod.startTs && p.timestamp <= selectedMyPeriod.endTs; });
-    var myPeriodSmall = myPeriodPurchases.reduce(function(s,p){ return s+p.small; }, 0);
-    var myPeriodLarge = myPeriodPurchases.reduce(function(s,p){ return s+p.large; }, 0);
+    var myPeriodSmall = myPeriodPurchases.reduce(function(s,p){ return s+(p.small||0); }, 0);
+    var myPeriodLarge = myPeriodPurchases.reduce(function(s,p){ return s+(p.large||0); }, 0);
+    var myPeriodPack5 = myPeriodPurchases.reduce(function(s,p){ return s+(p.pack5||0); }, 0);
     var myPeriodAmount = myPeriodPurchases.reduce(function(s,p){ return s+amountOf(p); }, 0);
 
     var periodCard = el('div', {class:'card'});
@@ -1116,8 +1150,8 @@
     ms2.appendChild(el('div', {class:'stat-num display', text: myPeriodLarge + '個'}));
     ms2.appendChild(el('div', {class:'stat-label', text:'大玉'}));
     var ms3 = el('div', {class:'stat-card'});
-    ms3.appendChild(el('div', {class:'stat-num display', text: (myPeriodSmall+myPeriodLarge) + '個'}));
-    ms3.appendChild(el('div', {class:'stat-label', text:'合計個数'}));
+    ms3.appendChild(el('div', {class:'stat-num display', text: myPeriodPack5 + '個'}));
+    ms3.appendChild(el('div', {class:'stat-label', text:'5個100円'}));
     var ms4 = el('div', {class:'stat-card'});
     ms4.appendChild(el('div', {class:'stat-num display', text: myPeriodAmount.toLocaleString() + '円'}));
     ms4.appendChild(el('div', {class:'stat-label', text:'天引き予定額'}));
@@ -1149,6 +1183,7 @@
         var parts = [];
         if(p.small>0) parts.push('小玉 ' + p.small + '個');
         if(p.large>0) parts.push('大玉 ' + p.large + '個');
+        if(p.pack5>0) parts.push('5個100円 ' + p.pack5 + '個');
         r.appendChild(el('div', {class:'log-breakdown', text: parts.join(' / ')}));
         logCard.appendChild(r);
       });
@@ -1158,11 +1193,12 @@
     return wrap;
   }
 
-  function buildSizeBlock(name, price, qty, onMinus, onPlus){
+  function buildSizeBlock(name, price, qty, onMinus, onPlus, unit){
+    unit = unit || '個';
     var block = el('div', {class:'size-block'});
     var info = el('div', {class:'size-info'});
     info.appendChild(el('div', {class:'size-name', text:name}));
-    info.appendChild(el('div', {class:'size-price', text: price + '円 / 個'}));
+    info.appendChild(el('div', {class:'size-price', text: price + '円 / ' + unit}));
     block.appendChild(info);
     var stepper = el('div', {class:'stepper'});
     var minusBtn = el('button', {class:'step-btn', text:'−'});
@@ -1186,6 +1222,7 @@
     if(e){
       if(e.small>0) parts.push('小玉' + e.small);
       if(e.large>0) parts.push('大玉' + e.large);
+      if(e.pack5>0) parts.push('5個100円' + e.pack5);
     }
     stamp.appendChild(el('div', {class:'stamp-small', text: parts.join(' / ')}));
     layer.appendChild(stamp);
@@ -1193,12 +1230,13 @@
   }
 
   function handlePurchase(){
-    if(state.small===0 && state.large===0) return;
+    if(state.small===0 && state.large===0 && state.pack5===0) return;
     var entry = {
       id: 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8),
       employeeNo: state.employeeNo,
       small: state.small,
       large: state.large,
+      pack5: state.pack5,
       timestamp: Date.now()
     };
     var updated = state.purchases.concat([entry]);
@@ -1207,6 +1245,7 @@
     state.showStamp = true;
     state.small = 0;
     state.large = 0;
+    state.pack5 = 0;
     render();
     savePurchases(updated);
     setTimeout(function(){
@@ -1242,17 +1281,19 @@
       if(!employees[p.employeeNo]){
         employees[p.employeeNo] = {
           employeeNo: p.employeeNo, perDate: {},
-          smallQty: 0, largeQty: 0, smallAmount: 0, largeAmount: 0,
+          smallQty: 0, largeQty: 0, pack5Qty: 0, smallAmount: 0, largeAmount: 0, pack5Amount: 0,
           totalQty: 0, totalAmount: 0
         };
       }
       var e = employees[p.employeeNo];
-      var qty = p.small + p.large;
+      var qty = (p.small||0) + (p.large||0) + (p.pack5||0);
       e.perDate[key] = (e.perDate[key] || 0) + qty;
-      e.smallQty += p.small;
-      e.largeQty += p.large;
-      e.smallAmount += p.small * SMALL_PRICE;
-      e.largeAmount += p.large * LARGE_PRICE;
+      e.smallQty += (p.small||0);
+      e.largeQty += (p.large||0);
+      e.pack5Qty += (p.pack5||0);
+      e.smallAmount += (p.small||0) * SMALL_PRICE;
+      e.largeAmount += (p.large||0) * LARGE_PRICE;
+      e.pack5Amount += (p.pack5||0) * PACK5_PRICE;
       e.totalQty += qty;
       e.totalAmount += amountOf(p);
     });
@@ -1261,13 +1302,13 @@
     empList.sort(function(a,b){ return b.totalAmount - a.totalAmount; });
 
     var header = ['社員No.', '名前'].concat(dateLabels).concat([
-      '小玉個数', '小玉金額(円)', '大玉個数', '大玉金額(円)', '合計個数', '合計金額(円)'
+      '小玉個数', '小玉金額(円)', '大玉個数', '大玉金額(円)', '5個100円個数', '5個100円金額(円)', '合計点数', '合計金額(円)'
     ]);
     var rows = [header];
     empList.forEach(function(e){
       var row = [e.employeeNo, displayName(e.employeeNo)];
       dateKeys.forEach(function(dk){ row.push(e.perDate[dk] || 0); });
-      row.push(e.smallQty, e.smallAmount, e.largeQty, e.largeAmount, e.totalQty, e.totalAmount);
+      row.push(e.smallQty, e.smallAmount, e.largeQty, e.largeAmount, e.pack5Qty, e.pack5Amount, e.totalQty, e.totalAmount);
       rows.push(row);
     });
 
@@ -1287,6 +1328,7 @@
     var parts = [];
     if(p.small>0) parts.push('小玉' + p.small);
     if(p.large>0) parts.push('大玉' + p.large);
+    if(p.pack5>0) parts.push('5個100円' + p.pack5);
     r.appendChild(el('div', {class:'history-detail', text: parts.join(' / ')}));
     r.appendChild(el('div', {class:'history-amount', text: amountOf(p).toLocaleString() + '円'}));
 
@@ -1294,8 +1336,9 @@
     var editBtn = el('button', {class:'action-btn', text:'編集'});
     editBtn.addEventListener('click', function(){
       state.editingId = p.id;
-      state.editSmall = p.small;
-      state.editLarge = p.large;
+      state.editSmall = p.small || 0;
+      state.editLarge = p.large || 0;
+      state.editPack5 = p.pack5 || 0;
       state.editError = '';
       render();
     });
@@ -1321,6 +1364,11 @@
     }, function(){
       state.editLarge++; render();
     }));
+    panel.appendChild(buildSizeBlock('5個100円トマト', PACK5_PRICE, state.editPack5, function(){
+      if(state.editPack5 > 0){ state.editPack5--; render(); }
+    }, function(){
+      state.editPack5++; render();
+    }, 'セット'));
 
     if(state.editError){
       panel.appendChild(el('p', {class:'error-msg', text: state.editError}));
@@ -1342,14 +1390,14 @@
   }
 
   function handleSaveEdit(id){
-    if(state.editSmall === 0 && state.editLarge === 0){
-      state.editError = '小玉・大玉のいずれかを1個以上にしてください（削除する場合は「削除」ボタンをご利用ください）';
+    if(state.editSmall === 0 && state.editLarge === 0 && state.editPack5 === 0){
+      state.editError = 'いずれかの商品を1つ以上にしてください（削除する場合は「削除」ボタンをご利用ください）';
       render();
       return;
     }
     var list = state.purchases.map(function(p){
       if(p.id === id){
-        return Object.assign({}, p, {small: state.editSmall, large: state.editLarge});
+        return Object.assign({}, p, {small: state.editSmall, large: state.editLarge, pack5: state.editPack5});
       }
       return p;
     });
@@ -1467,11 +1515,12 @@
 
     var purchases = state.purchases;
     var agg = aggregate(purchases);
-    var totalSmall = purchases.reduce(function(s,p){ return s+p.small; }, 0);
-    var totalLarge = purchases.reduce(function(s,p){ return s+p.large; }, 0);
+    var totalSmall = purchases.reduce(function(s,p){ return s+(p.small||0); }, 0);
+    var totalLarge = purchases.reduce(function(s,p){ return s+(p.large||0); }, 0);
+    var totalPack5 = purchases.reduce(function(s,p){ return s+(p.pack5||0); }, 0);
     var totalAmount = purchases.reduce(function(s,p){ return s+amountOf(p); }, 0);
 
-    var statsRow = el('div', {class:'stats-row triple'});
+    var statsRow = el('div', {class:'stats-row', style:'grid-template-columns: 1fr 1fr 1fr 1fr;'});
     var s1 = el('div', {class:'stat-card'});
     s1.appendChild(el('div', {class:'stat-num display', text: totalSmall + '個'}));
     s1.appendChild(el('div', {class:'stat-label', text:'小玉 合計'}));
@@ -1479,148 +1528,169 @@
     s2.appendChild(el('div', {class:'stat-num display', text: totalLarge + '個'}));
     s2.appendChild(el('div', {class:'stat-label', text:'大玉 合計'}));
     var s3 = el('div', {class:'stat-card'});
-    s3.appendChild(el('div', {class:'stat-num display', text: totalAmount.toLocaleString() + '円'}));
-    s3.appendChild(el('div', {class:'stat-label', text:'総売上'}));
+    s3.appendChild(el('div', {class:'stat-num display', text: totalPack5 + '個'}));
+    s3.appendChild(el('div', {class:'stat-label', text:'5個100円'}));
+    var s4 = el('div', {class:'stat-card'});
+    s4.appendChild(el('div', {class:'stat-num display', text: totalAmount.toLocaleString() + '円'}));
+    s4.appendChild(el('div', {class:'stat-label', text:'総売上'}));
     statsRow.appendChild(s1);
     statsRow.appendChild(s2);
     statsRow.appendChild(s3);
+    statsRow.appendChild(s4);
     wrap.appendChild(statsRow);
 
     // ===== 社員マスタ編集カード =====
     var empCard = el('div', {class:'card'});
-    empCard.appendChild(el('h2', {class:'card-title display', text:'社員マスタ管理'}));
-    empCard.appendChild(el('p', {class:'card-sub', text:'社員の追加・編集・削除ができます'}));
+    
+    var toggleHead = el('div', {class:'card-toggle-head'});
+    var titleGroup = el('div', {});
+    titleGroup.appendChild(el('h2', {class:'card-title display', text:'社員マスタ管理'}));
+    titleGroup.appendChild(el('p', {class:'card-sub', style:'margin-bottom:0;', text: state.employeeMaster.length + '件登録済み（タップで開閉）'}));
+    toggleHead.appendChild(titleGroup);
+    toggleHead.appendChild(el('div', {class:'toggle-icon' + (state.isEmpCardOpen ? ' open' : ''), text: state.isEmpCardOpen ? '▲ 閉じる' : '▼ 開く'}));
+    
+    toggleHead.addEventListener('click', function(){
+      state.isEmpCardOpen = !state.isEmpCardOpen;
+      render();
+    });
+    empCard.appendChild(toggleHead);
 
-    // タブ切り替え
-    var empTabs = el('div', {class:'emp-tabs'});
-    var tabList = el('button', {class:'emp-tab' + (state.empTab==='list'?' active':''), text:'一覧・編集'});
-    var tabUpload = el('button', {class:'emp-tab' + (state.empTab==='upload'?' active':''), text:'Excelで一括読込'});
-    tabList.addEventListener('click', function(){ state.empTab='list'; render(); });
-    tabUpload.addEventListener('click', function(){ state.empTab='upload'; render(); });
-    empTabs.appendChild(tabList);
-    empTabs.appendChild(tabUpload);
-    empCard.appendChild(empTabs);
+    if(state.isEmpCardOpen){
+      var bodyWrap = el('div', {style:'margin-top:16px;'});
+      
+      // タブ切り替え
+      var empTabs = el('div', {class:'emp-tabs'});
+      var tabList = el('button', {class:'emp-tab' + (state.empTab==='list'?' active':''), text:'一覧・編集'});
+      var tabUpload = el('button', {class:'emp-tab' + (state.empTab==='upload'?' active':''), text:'Excelで一括読込'});
+      tabList.addEventListener('click', function(){ state.empTab='list'; render(); });
+      tabUpload.addEventListener('click', function(){ state.empTab='upload'; render(); });
+      empTabs.appendChild(tabList);
+      empTabs.appendChild(tabUpload);
+      bodyWrap.appendChild(empTabs);
 
-    if(state.empTab === 'upload'){
-      // ---- Excelアップロードタブ ----
-      var box = el('div', {class:'upload-box'});
-      box.appendChild(el('p', {class:'upload-hint', text:'1列目：社員No. / 2列目：氏名（1行目は見出し行として無視されます）'}));
-      var fileInput = el('input', {class:'file-input', type:'file', accept:'.xlsx,.xls,.csv'});
-      fileInput.addEventListener('change', function(ev){
-        var file = ev.target.files[0];
-        if(file) handleFileUpload(file);
-      });
-      box.appendChild(fileInput);
-      var statusText = state.uploadMessage || (state.employeeMaster.length + '件を登録済み');
-      box.appendChild(el('p', {class:'upload-status' + (state.uploadError ? ' error' : ''), text: statusText}));
-      empCard.appendChild(box);
-    } else {
-      // ---- 一覧・編集タブ ----
-      // 検索欄
-      var searchInput = el('input', {
-        class: 'emp-search',
-        type: 'text',
-        placeholder: '社員No.または氏名で検索…',
-        value: state.empSearch
-      });
-      searchInput.addEventListener('input', function(){
-        state.empSearch = searchInput.value;
-        render();
-      });
-      empCard.appendChild(searchInput);
-
-      // ヘッダー行
-      if(state.employeeMaster.length > 0){
-        var empHead = el('div', {class:'emp-list-head'});
-        empHead.appendChild(el('div', {text:'社員No.'}));
-        empHead.appendChild(el('div', {text:'氏名'}));
-        empHead.appendChild(el('div', {text:'操作'}));
-        empCard.appendChild(empHead);
-      }
-
-      // 社員一覧
-      var query = state.empSearch.trim().toLowerCase();
-      var filtered = state.employeeMaster.filter(function(e){
-        if(!query) return true;
-        return e.employeeNo.toLowerCase().indexOf(query) >= 0 || (e.name||'').toLowerCase().indexOf(query) >= 0;
-      });
-
-      if(state.employeeMaster.length === 0){
-        empCard.appendChild(el('div', {class:'empty-state', text:'社員が登録されていません。下の「追加」フォームから登録してください。'}));
-      } else if(filtered.length === 0){
-        empCard.appendChild(el('div', {class:'empty-state', text:'"' + state.empSearch + '" に一致する社員はいません'}));
-      } else {
-        filtered.forEach(function(emp){
-          if(state.empEditingNo === emp.employeeNo){
-            // --- インライン編集フォーム ---
-            var editRow = el('div', {class:'emp-edit-row'});
-            var noIn = el('input', {class:'emp-input', type:'text', placeholder:'社員No.', value: state.empEditNoValue});
-            noIn.addEventListener('input', function(){ state.empEditNoValue = noIn.value; });
-            var nameIn = el('input', {class:'emp-input', type:'text', placeholder:'氏名', value: state.empEditName});
-            nameIn.addEventListener('input', function(){ state.empEditName = nameIn.value; });
-            var eActions = el('div', {class:'emp-edit-actions'});
-            var saveEmpBtn = el('button', {class:'action-btn', text:'保存'});
-            saveEmpBtn.style.cssText = 'background:var(--leaf-dark);color:#fff;border-color:var(--leaf-dark);';
-            saveEmpBtn.addEventListener('click', function(){
-              handleSaveEmployee(emp.employeeNo, state.empEditNoValue.trim(), state.empEditName.trim());
-            });
-            var cancelEmpBtn = el('button', {class:'action-btn', text:'×'});
-            cancelEmpBtn.addEventListener('click', function(){
-              state.empEditingNo = null;
-              render();
-            });
-            eActions.appendChild(saveEmpBtn);
-            eActions.appendChild(cancelEmpBtn);
-            editRow.appendChild(noIn);
-            editRow.appendChild(nameIn);
-            editRow.appendChild(eActions);
-            empCard.appendChild(editRow);
-          } else {
-            // --- 通常表示行 ---
-            var empRow = el('div', {class:'emp-row'});
-            empRow.appendChild(el('div', {class:'emp-row-no', text: emp.employeeNo}));
-            empRow.appendChild(el('div', {class:'emp-row-name', text: emp.name || '（未設定）'}));
-            var rowActs = el('div', {class:'emp-row-actions'});
-            var editEmpBtn = el('button', {class:'action-btn', text:'編集'});
-            editEmpBtn.addEventListener('click', (function(e){
-              return function(){
-                state.empEditingNo = e.employeeNo;
-                state.empEditNoValue = e.employeeNo;
-                state.empEditName = e.name || '';
-                render();
-              };
-            })(emp));
-            var delEmpBtn = el('button', {class:'action-btn danger', text:'削除'});
-            delEmpBtn.addEventListener('click', (function(e){
-              return function(){ handleDeleteEmployee(e.employeeNo); };
-            })(emp));
-            rowActs.appendChild(editEmpBtn);
-            rowActs.appendChild(delEmpBtn);
-            empRow.appendChild(rowActs);
-            empCard.appendChild(empRow);
-          }
+      if(state.empTab === 'upload'){
+        // ---- Excelアップロードタブ ----
+        var box = el('div', {class:'upload-box'});
+        box.appendChild(el('p', {class:'upload-hint', text:'1列目：社員No. / 2列目：氏名（1行目は見出し行として無視されます）'}));
+        var fileInput = el('input', {class:'file-input', type:'file', accept:'.xlsx,.xls,.csv'});
+        fileInput.addEventListener('change', function(ev){
+          var file = ev.target.files[0];
+          if(file) handleFileUpload(file);
         });
-      }
+        box.appendChild(fileInput);
+        var statusText = state.uploadMessage || (state.employeeMaster.length + '件を登録済み');
+        box.appendChild(el('p', {class:'upload-status' + (state.uploadError ? ' error' : ''), text: statusText}));
+        bodyWrap.appendChild(box);
+      } else {
+        // ---- 一覧・編集タブ ----
+        // 検索欄
+        var searchInput = el('input', {
+          class: 'emp-search',
+          type: 'text',
+          placeholder: '社員No.または氏名で検索…',
+          value: state.empSearch
+        });
+        searchInput.addEventListener('input', function(){
+          state.empSearch = searchInput.value;
+          render();
+        });
+        bodyWrap.appendChild(searchInput);
 
-      // 新規追加フォーム
-      var addForm = el('div', {class:'emp-add-form'});
-      var addNoIn = el('input', {class:'emp-input', type:'text', placeholder:'社員No.', value: state.empAddNo});
-      addNoIn.addEventListener('input', function(){ state.empAddNo = addNoIn.value; });
-      var addNameIn = el('input', {class:'emp-input', type:'text', placeholder:'氏名', value: state.empAddName});
-      addNameIn.addEventListener('input', function(){ state.empAddName = addNameIn.value; });
-      var addBtn = el('button', {class:'emp-add-btn', text:'＋ 追加'});
-      addBtn.addEventListener('click', function(){
-        handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim());
-      });
-      addNoIn.addEventListener('keydown', function(ev){ if(ev.key==='Enter') addNameIn.focus(); });
-      addNameIn.addEventListener('keydown', function(ev){ if(ev.key==='Enter') handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim()); });
-      addForm.appendChild(addNoIn);
-      addForm.appendChild(addNameIn);
-      addForm.appendChild(addBtn);
-      if(state.empAddError){
-        addForm.appendChild(el('div', {class:'emp-error', text: state.empAddError}));
+        // ヘッダー行
+        if(state.employeeMaster.length > 0){
+          var empHead = el('div', {class:'emp-list-head'});
+          empHead.appendChild(el('div', {text:'社員No.'}));
+          empHead.appendChild(el('div', {text:'氏名'}));
+          empHead.appendChild(el('div', {text:'操作'}));
+          bodyWrap.appendChild(empHead);
+        }
+
+        // 社員一覧
+        var query = state.empSearch.trim().toLowerCase();
+        var filtered = state.employeeMaster.filter(function(e){
+          if(!query) return true;
+          return e.employeeNo.toLowerCase().indexOf(query) >= 0 || (e.name||'').toLowerCase().indexOf(query) >= 0;
+        });
+
+        if(state.employeeMaster.length === 0){
+          bodyWrap.appendChild(el('div', {class:'empty-state', text:'社員が登録されていません。下の「追加」フォームから登録してください。'}));
+        } else if(filtered.length === 0){
+          bodyWrap.appendChild(el('div', {class:'empty-state', text:'"' + state.empSearch + '" に一致する社員はいません'}));
+        } else {
+          filtered.forEach(function(emp){
+            if(state.empEditingNo === emp.employeeNo){
+              // --- インライン編集フォーム ---
+              var editRow = el('div', {class:'emp-edit-row'});
+              var noIn = el('input', {class:'emp-input', type:'text', placeholder:'社員No.', value: state.empEditNoValue});
+              noIn.addEventListener('input', function(){ state.empEditNoValue = noIn.value; });
+              var nameIn = el('input', {class:'emp-input', type:'text', placeholder:'氏名', value: state.empEditName});
+              nameIn.addEventListener('input', function(){ state.empEditName = nameIn.value; });
+              var eActions = el('div', {class:'emp-edit-actions'});
+              var saveEmpBtn = el('button', {class:'action-btn', text:'保存'});
+              saveEmpBtn.style.cssText = 'background:var(--leaf-dark);color:#fff;border-color:var(--leaf-dark);';
+              saveEmpBtn.addEventListener('click', function(){
+                handleSaveEmployee(emp.employeeNo, state.empEditNoValue.trim(), state.empEditName.trim());
+              });
+              var cancelEmpBtn = el('button', {class:'action-btn', text:'×'});
+              cancelEmpBtn.addEventListener('click', function(){
+                state.empEditingNo = null;
+                render();
+              });
+              eActions.appendChild(saveEmpBtn);
+              eActions.appendChild(cancelEmpBtn);
+              editRow.appendChild(noIn);
+              editRow.appendChild(nameIn);
+              editRow.appendChild(eActions);
+              bodyWrap.appendChild(editRow);
+            } else {
+              // --- 通常表示行 ---
+              var empRow = el('div', {class:'emp-row'});
+              empRow.appendChild(el('div', {class:'emp-row-no', text: emp.employeeNo}));
+              empRow.appendChild(el('div', {class:'emp-row-name', text: emp.name || '（未設定）'}));
+              var rowActs = el('div', {class:'emp-row-actions'});
+              var editEmpBtn = el('button', {class:'action-btn', text:'編集'});
+              editEmpBtn.addEventListener('click', (function(e){
+                return function(){
+                  state.empEditingNo = e.employeeNo;
+                  state.empEditNoValue = e.employeeNo;
+                  state.empEditName = e.name || '';
+                  render();
+                };
+              })(emp));
+              var delEmpBtn = el('button', {class:'action-btn danger', text:'削除'});
+              delEmpBtn.addEventListener('click', (function(e){
+                return function(){ handleDeleteEmployee(e.employeeNo); };
+              })(emp));
+              rowActs.appendChild(editEmpBtn);
+              rowActs.appendChild(delEmpBtn);
+              empRow.appendChild(rowActs);
+              bodyWrap.appendChild(empRow);
+            }
+          });
+        }
+
+        // 新規追加フォーム
+        var addForm = el('div', {class:'emp-add-form'});
+        var addNoIn = el('input', {class:'emp-input', type:'text', placeholder:'社員No.', value: state.empAddNo});
+        addNoIn.addEventListener('input', function(){ state.empAddNo = addNoIn.value; });
+        var addNameIn = el('input', {class:'emp-input', type:'text', placeholder:'氏名', value: state.empAddName});
+        addNameIn.addEventListener('input', function(){ state.empAddName = addNameIn.value; });
+        var addBtn = el('button', {class:'emp-add-btn', text:'＋ 追加'});
+        addBtn.addEventListener('click', function(){
+          handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim());
+        });
+        addNoIn.addEventListener('keydown', function(ev){ if(ev.key==='Enter') addNameIn.focus(); });
+        addNameIn.addEventListener('keydown', function(ev){ if(ev.key==='Enter') handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim()); });
+        addForm.appendChild(addNoIn);
+        addForm.appendChild(addNameIn);
+        addForm.appendChild(addBtn);
+        if(state.empAddError){
+          addForm.appendChild(el('div', {class:'emp-error', text: state.empAddError}));
+        }
+        bodyWrap.appendChild(addForm);
       }
-      empCard.appendChild(addForm);
+      
+      empCard.appendChild(bodyWrap);
     }
 
     wrap.appendChild(empCard);
@@ -1652,29 +1722,32 @@
     if(periodData.agg.length === 0){
       payrollCard.appendChild(el('div', {class:'empty-state', text:'この期間の購入はありません'}));
     } else {
-      var head = el('div', {class:'payroll-row head'});
+      var head = el('div', {class:'payroll-row head', style:'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;'});
       head.appendChild(el('div', {text:'氏名'}));
       head.appendChild(el('div', {class:'payroll-num', text:'小玉'}));
       head.appendChild(el('div', {class:'payroll-num', text:'大玉'}));
+      head.appendChild(el('div', {class:'payroll-num', text:'5個100円'}));
       head.appendChild(el('div', {class:'payroll-num', text:'天引き額'}));
       payrollCard.appendChild(head);
 
       var periodTotalAmount = 0;
       periodData.agg.forEach(function(row){
         periodTotalAmount += row.amount;
-        var r = el('div', {class:'payroll-row'});
+        var r = el('div', {class:'payroll-row', style:'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;'});
         var nameCell = el('div', {});
         nameCell.appendChild(el('div', {class:'payroll-name', text: displayName(row.employeeNo)}));
         nameCell.appendChild(el('div', {class:'rank-detail', text: 'No.' + row.employeeNo}));
         r.appendChild(nameCell);
-        r.appendChild(el('div', {class:'payroll-num', text: row.small + '個'}));
-        r.appendChild(el('div', {class:'payroll-num', text: row.large + '個'}));
+        r.appendChild(el('div', {class:'payroll-num', text: (row.small||0) + '個'}));
+        r.appendChild(el('div', {class:'payroll-num', text: (row.large||0) + '個'}));
+        r.appendChild(el('div', {class:'payroll-num', text: (row.pack5||0) + '個'}));
         r.appendChild(el('div', {class:'payroll-amount', text: row.amount.toLocaleString() + '円'}));
         payrollCard.appendChild(r);
       });
 
-      var totalRow = el('div', {class:'payroll-row total'});
+      var totalRow = el('div', {class:'payroll-row total', style:'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;'});
       totalRow.appendChild(el('div', {class:'payroll-name', text:'合計'}));
+      totalRow.appendChild(el('div', {class:'payroll-num'}));
       totalRow.appendChild(el('div', {class:'payroll-num'}));
       totalRow.appendChild(el('div', {class:'payroll-num'}));
       totalRow.appendChild(el('div', {class:'payroll-amount', text: periodTotalAmount.toLocaleString() + '円'}));
@@ -1728,7 +1801,7 @@
         var r = el('div', {class:'rank-row'});
         var badgeClass = 'rank-badge' + (i===0?' gold':i===1?' silver':i===2?' bronze':'');
         r.appendChild(el('div', {class:badgeClass, text:String(i+1)}));
-        var detail = el('div', {class:'rank-detail', text: 'No.' + row.employeeNo + ' ・ 小玉 ' + row.small + '個 / 大玉 ' + row.large + '個'});
+        var detail = el('div', {class:'rank-detail', text: 'No.' + row.employeeNo + ' ・ 小玉 ' + (row.small||0) + '個 / 大玉 ' + (row.large||0) + '個 / 5個100円 ' + (row.pack5||0) + '個'});
         var nameCol = el('div', {style:'flex:1;'});
         nameCol.appendChild(el('div', {class:'rank-name', text: displayName(row.employeeNo)}));
         nameCol.appendChild(detail);
