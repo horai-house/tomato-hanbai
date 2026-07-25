@@ -1,1904 +1,2180 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>社内トマト購入</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-<style>
-  :root{
-    --paper:#FBF3E6;
-    --crate:#E9D9B8;
-    --crate-dark:#C9AF80;
-    --tomato:#D6472C;
-    --tomato-dark:#A32F1F;
-    --leaf:#4C7A52;
-    --leaf-dark:#345938;
-    --ink:#332A22;
-    --ink-soft:#8A7E6C;
-    --gold:#DE9E3E;
-    --line: rgba(51,42,34,0.12);
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:
-      radial-gradient(circle at 15% 8%, rgba(214,71,44,0.05), transparent 45%),
-      radial-gradient(circle at 85% 92%, rgba(76,122,82,0.06), transparent 45%),
-      var(--paper);
-    font-family:"Noto Sans JP", sans-serif;
-    color:var(--ink);
-    min-height:100vh;
-    -webkit-font-smoothing:antialiased;
-  }
-  .display{font-family:"Zen Maru Gothic", sans-serif;}
-  .wrap{
-    max-width:480px;
-    margin:0 auto;
-    padding:20px 16px 60px;
-    min-height:100vh;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>社内トマト購入</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    :root {
+      --paper: #FBF3E6;
+      --crate: #E9D9B8;
+      --crate-dark: #C9AF80;
+      --tomato: #D6472C;
+      --tomato-dark: #A32F1F;
+      --leaf: #4C7A52;
+      --leaf-dark: #345938;
+      --ink: #332A22;
+      --ink-soft: #8A7E6C;
+      --gold: #DE9E3E;
+      --line: rgba(51, 42, 34, 0.12);
+    }
 
-  /* ===== Login screen ===== */
-  .login-screen{
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    padding:24px;
-    text-align:center;
-  }
-  .login-badge{
-    display:flex;align-items:center;justify-content:center;
-    font-size:72px;
-    margin-bottom:18px;
-  }
-  .login-title{
-    font-size:26px;
-    font-weight:900;
-    margin:0 0 6px;
-    letter-spacing:0.02em;
-  }
-  .login-sub{
-    color:var(--ink-soft);
-    font-size:14px;
-    margin:0 0 32px;
-  }
-  .login-card{
-    width:100%;
-    max-width:340px;
-    background:#fff;
-    border-radius:20px;
-    padding:22px 22px 26px;
-    box-shadow:0 12px 30px rgba(51,42,34,0.08);
-    border:1px solid var(--line);
-  }
-  .mode-toggle{
-    display:flex;
-    background:var(--paper);
-    border-radius:12px;
-    padding:4px;
-    margin-bottom:20px;
-    border:1px solid var(--line);
-  }
-  .mode-btn{
-    flex:1;
-    padding:9px 4px;
-    text-align:center;
-    font-size:13px;
-    font-weight:700;
-    color:var(--ink-soft);
-    background:none;
-    border:none;
-    border-radius:9px;
-    cursor:pointer;
-    font-family:"Noto Sans JP", sans-serif;
-  }
-  .mode-btn.active{
-    background:#fff;
-    color:var(--tomato-dark);
-    box-shadow:0 2px 6px rgba(51,42,34,0.1);
-  }
-  .field-label{
-    display:block;
-    text-align:left;
-    font-size:13px;
-    font-weight:700;
-    color:var(--ink-soft);
-    margin-bottom:8px;
-  }
-  .field-input{
-    width:100%;
-    padding:14px 16px;
-    font-size:18px;
-    border-radius:12px;
-    border:2px solid var(--line);
-    background:var(--paper);
-    color:var(--ink);
-    font-family:"Noto Sans JP", sans-serif;
-    letter-spacing:0.04em;
-    outline:none;
-    transition:border-color 0.15s ease;
-  }
-  .field-input:focus{border-color:var(--tomato);}
-  .error-msg{
-    color:var(--tomato-dark);
-    font-size:12.5px;
-    text-align:left;
-    margin:6px 2px 0;
-    min-height:16px;
-    font-weight:500;
-  }
-  .btn{
-    border:none;
-    cursor:pointer;
-    font-family:"Zen Maru Gothic", sans-serif;
-    font-weight:700;
-    border-radius:14px;
-    transition:transform 0.08s ease, box-shadow 0.15s ease;
-  }
-  .btn:active{transform:scale(0.97);}
-  .btn-primary{
-    width:100%;
-    padding:15px;
-    margin-top:18px;
-    font-size:16px;
-    color:#fff;
-    background:linear-gradient(180deg, var(--tomato), var(--tomato-dark));
-    box-shadow:0 8px 18px rgba(163,47,31,0.28);
-  }
-  .btn-primary.admin-btn{
-    background:linear-gradient(180deg, var(--leaf), var(--leaf-dark));
-    box-shadow:0 8px 18px rgba(52,89,56,0.28);
-  }
-  .btn-primary.export-btn{
-    margin-top:16px;
-  }
-  .btn-primary:disabled{opacity:0.5;cursor:default;}
+    * {
+      box-sizing: border-box;
+    }
 
-  /* ===== Main app ===== */
-  .topbar{
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    gap:6px;
-    margin-bottom:18px;
-  }
-  .topbar-title{
-    font-size:19px;
-    font-weight:900;
-    display:flex;align-items:center;gap:8px;
-  }
-  .topbar-user{
-    display:flex;
-    align-items:center;
-    justify-content:flex-end;
-    gap:10px;
-  }
-  .user-chip{
-    background:#fff;
-    border:1px solid var(--line);
-    border-radius:999px;
-    padding:6px 12px;
-    font-size:13px;
-    font-weight:700;
-    color:var(--leaf-dark);
-  }
-  .user-chip.admin{color:var(--tomato-dark);}
-  .logout-link{
-    font-size:12.5px;
-    color:var(--ink-soft);
-    text-decoration:underline;
-    background:none;border:none;cursor:pointer;
-    padding:4px;
-    font-family:"Noto Sans JP", sans-serif;
-  }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-  .stats-row{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-    margin-bottom:16px;
-  }
-  .stats-row.triple{grid-template-columns:1fr 1fr 1fr;}
-  .stat-card{
-    background:var(--crate);
-    border-radius:14px;
-    padding:14px 14px;
-    border:1px solid var(--crate-dark);
-    position:relative;
-    overflow:hidden;
-  }
-  .stat-card::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:repeating-linear-gradient(115deg, rgba(255,255,255,0.15) 0 2px, transparent 2px 14px);
-    opacity:0.5;
-  }
-  .stat-num{
-    font-family:"Zen Maru Gothic", sans-serif;
-    font-size:23px;
-    font-weight:900;
-    color:var(--leaf-dark);
-    position:relative;
-  }
-  .stat-label{
-    font-size:11px;
-    color:#6b5f4a;
-    font-weight:700;
-    position:relative;
-  }
+    body {
+      background:
+        radial-gradient(circle at 15% 8%, rgba(214, 71, 44, 0.05), transparent 45%),
+        radial-gradient(circle at 85% 92%, rgba(76, 122, 82, 0.06), transparent 45%),
+        var(--paper);
+      font-family: "Noto Sans JP", sans-serif;
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
-  .card{
-    background:#fff;
-    border-radius:18px;
-    padding:20px;
-    margin-bottom:16px;
-    border:1px solid var(--line);
-    box-shadow:0 6px 18px rgba(51,42,34,0.05);
-  }
-  .card-title{
-    font-size:16px;
-    font-weight:900;
-    margin:0 0 2px;
-  }
-  .card-sub{
-    font-size:12.5px;
-    color:var(--ink-soft);
-    margin:0 0 18px;
-  }
+    .display {
+      font-family: "Zen Maru Gothic", sans-serif;
+    }
 
-  .size-block{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:12px 0;
-    border-bottom:1px solid var(--line);
-  }
-  .size-block:last-of-type{border-bottom:none;}
-  .size-info{display:flex;flex-direction:column;}
-  .size-name{font-weight:700;font-size:14.5px;}
-  .size-price{font-size:12px;color:var(--ink-soft);}
-  .stepper{
-    display:flex;
-    align-items:center;
-    gap:12px;
-  }
-  .step-btn{
-    width:38px;height:38px;
-    border-radius:50%;
-    border:2px solid var(--leaf);
-    background:#fff;
-    color:var(--leaf-dark);
-    font-size:19px;
-    font-weight:900;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .step-btn:active{background:var(--leaf); color:#fff; transform:scale(0.94);}
-  .step-value{
-    font-family:"Zen Maru Gothic", sans-serif;
-    font-size:22px;
-    font-weight:900;
-    min-width:28px;
-    text-align:center;
-  }
+    .wrap {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+      min-height: 100vh;
+    }
 
-  .subtotal-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    margin:16px 0 6px;
-    padding-top:10px;
-  }
-  .subtotal-label{font-size:13px;color:var(--ink-soft);font-weight:700;}
-  .subtotal-value{font-family:"Zen Maru Gothic", sans-serif;font-size:22px;font-weight:900;color:var(--tomato-dark);}
+    /* ===== Login screen ===== */
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
 
-  .buy-btn{
-    width:100%;
-    padding:16px;
-    font-size:17px;
-    color:#fff;
-    background:linear-gradient(180deg, var(--tomato), var(--tomato-dark));
-    box-shadow:0 10px 20px rgba(163,47,31,0.3);
-    margin-top:10px;
-  }
+    .login-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 72px;
+      margin-bottom: 18px;
+    }
 
-  /* ranking */
-  .rank-row{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px 0;
-    border-bottom:1px solid var(--line);
-  }
-  .rank-row:last-child{border-bottom:none;}
-  .rank-badge{
-    width:26px;height:26px;
-    border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    font-size:12px;
-    font-weight:900;
-    font-family:"Zen Maru Gothic", sans-serif;
-    background:var(--paper);
-    color:var(--ink-soft);
-    flex-shrink:0;
-  }
-  .rank-badge.gold{background:#F3D28A;color:#7A5A12;}
-  .rank-badge.silver{background:#E1E1E1;color:#5B5B5B;}
-  .rank-badge.bronze{background:#E3B48C;color:#7A4A22;}
-  .rank-name{
-    flex:1;
-    font-weight:700;
-    font-size:14px;
-  }
-  .rank-detail{
-    font-size:11.5px;
-    color:var(--ink-soft);
-  }
-  .rank-amount{
-    font-family:"Zen Maru Gothic", sans-serif;
-    font-weight:900;
-    color:var(--tomato-dark);
-    font-size:14.5px;
-    text-align:right;
-    min-width:66px;
-  }
-  .empty-state{
-    text-align:center;
-    padding:24px 8px;
-    color:var(--ink-soft);
-    font-size:13.5px;
-  }
+    .login-title {
+      font-size: 26px;
+      font-weight: 900;
+      margin: 0 0 6px;
+      letter-spacing: 0.02em;
+    }
 
-  /* log */
-  .log-row{
-    padding:10px 0;
-    border-bottom:1px solid var(--line);
-    font-size:13.5px;
-  }
-  .log-row:last-child{border-bottom:none;}
-  .log-top{
-    display:flex;
-    justify-content:space-between;
-    margin-bottom:3px;
-  }
-  .log-time{color:var(--ink-soft);font-size:12px;}
-  .log-amount{
-    font-family:"Zen Maru Gothic", sans-serif;
-    font-weight:900;
-    color:var(--tomato-dark);
-  }
-  .log-breakdown{
-    font-size:12px;
-    color:var(--ink-soft);
-  }
+    .login-sub {
+      color: var(--ink-soft);
+      font-size: 14px;
+      margin: 0 0 32px;
+    }
 
-  /* stamp toast */
-  .toast-layer{
-    position:fixed;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    pointer-events:none;
-    z-index:50;
-  }
-  .stamp{
-    width:150px;height:150px;
-    border-radius:50%;
-    border:5px solid var(--tomato);
-    color:var(--tomato);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    font-family:"Zen Maru Gothic", sans-serif;
-    font-weight:900;
-    background:rgba(255,255,255,0.92);
-    transform:scale(2.2) rotate(-14deg);
-    opacity:0;
-    animation:stampIn 1.1s cubic-bezier(.2,1.4,.4,1) forwards;
-    box-shadow:0 10px 30px rgba(163,47,31,0.25);
-    text-align:center;
-  }
-  .stamp-big{font-size:26px;line-height:1.2;}
-  .stamp-small{font-size:12px;letter-spacing:0.04em;margin-top:6px;}
-  @keyframes stampIn{
-    0%{opacity:0; transform:scale(2.2) rotate(-14deg);}
-    35%{opacity:1; transform:scale(0.94) rotate(-14deg);}
-    45%{transform:scale(1.05) rotate(-14deg);}
-    60%{transform:scale(1) rotate(-14deg);}
-    82%{opacity:1;}
-    100%{opacity:0; transform:scale(1) rotate(-14deg);}
-  }
+    .login-card {
+      width: 100%;
+      max-width: 340px;
+      background: #fff;
+      border-radius: 20px;
+      padding: 22px 22px 26px;
+      box-shadow: 0 12px 30px rgba(51, 42, 34, 0.08);
+      border: 1px solid var(--line);
+    }
 
-  .upload-box{
-    border:2px dashed var(--crate-dark);
-    border-radius:14px;
-    padding:16px;
-    background:var(--paper);
-    text-align:center;
-  }
-  .upload-hint{
-    font-size:11.5px;
-    color:var(--ink-soft);
-    margin:0 0 12px;
-    line-height:1.6;
-  }
-  .file-input{
-    font-family:"Noto Sans JP", sans-serif;
-    font-size:13px;
-    width:100%;
-  }
-  .upload-status{
-    margin-top:12px;
-    font-size:12.5px;
-    font-weight:700;
-    color:var(--leaf-dark);
-  }
-  .upload-status.error{color:var(--tomato-dark);}
+    .mode-toggle {
+      display: flex;
+      background: var(--paper);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+    }
 
-  .period-select{
-    width:100%;
-    padding:12px 14px;
-    font-size:14px;
-    font-weight:700;
-    border-radius:12px;
-    border:2px solid var(--line);
-    background:var(--paper);
-    color:var(--ink);
-    font-family:"Noto Sans JP", sans-serif;
-    margin-bottom:16px;
-    -webkit-appearance:none;
-    appearance:none;
-  }
-  .payroll-row{
-    display:grid;
-    grid-template-columns:1.3fr 0.9fr 0.9fr 1fr;
-    gap:6px;
-    align-items:center;
-    padding:10px 0;
-    border-bottom:1px solid var(--line);
-    font-size:13px;
-  }
-  .payroll-row.head{
-    font-size:11px;
-    color:var(--ink-soft);
-    font-weight:700;
-    border-bottom:2px solid var(--crate-dark);
-  }
-  .payroll-row.total{
-    border-bottom:none;
-    border-top:2px solid var(--crate-dark);
-    font-weight:900;
-    padding-top:12px;
-  }
-  .payroll-row:last-child{border-bottom:none;}
-  .payroll-name{font-weight:700;}
-  .payroll-num{text-align:right;color:var(--ink-soft);}
-  .payroll-amount{text-align:right;font-family:"Zen Maru Gothic", sans-serif;font-weight:900;color:var(--tomato-dark);}
+    .mode-btn {
+      flex: 1;
+      padding: 9px 4px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      background: none;
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      font-family: "Noto Sans JP", sans-serif;
+    }
 
-  .btn-secondary{
-    width:100%;
-    padding:15px;
-    font-size:15px;
-    color:var(--ink-soft);
-    background:#fff;
-    border:2px solid var(--line);
-  }
+    .mode-btn.active {
+      background: #fff;
+      color: var(--tomato-dark);
+      box-shadow: 0 2px 6px rgba(51, 42, 34, 0.1);
+    }
 
-  .history-row{
-    display:grid;
-    grid-template-columns:0.9fr 0.85fr 1fr 0.8fr 0.75fr;
-    gap:6px;
-    align-items:center;
-    padding:9px 0;
-    border-bottom:1px solid var(--line);
-    font-size:12.5px;
-  }
-  .history-row.head{
-    font-size:11px;
-    color:var(--ink-soft);
-    font-weight:700;
-    border-bottom:2px solid var(--crate-dark);
-  }
-  .history-row:last-child{border-bottom:none;}
-  .history-date{color:var(--ink-soft);}
-  .history-name{font-weight:700;}
-  .history-detail{color:var(--ink-soft);}
-  .history-amount{text-align:right;font-family:"Zen Maru Gothic", sans-serif;font-weight:900;color:var(--tomato-dark);}
-  .history-actions{display:flex;flex-direction:column;gap:4px;align-items:stretch;}
-  .action-btn{
-    font-size:10.5px;
-    padding:4px 6px;
-    border-radius:8px;
-    border:1px solid var(--line);
-    background:#fff;
-    color:var(--ink-soft);
-    cursor:pointer;
-    font-family:"Noto Sans JP", sans-serif;
-  }
-  .action-btn.danger{color:var(--tomato-dark); border-color:rgba(163,47,31,0.3);}
+    .field-label {
+      display: block;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      margin-bottom: 8px;
+    }
 
-  .edit-panel{
-    background:var(--paper);
-    border:2px solid var(--tomato);
-    border-radius:14px;
-    padding:14px;
-    margin:10px 0;
-  }
-  .edit-panel-head{
-    font-size:13px;
-    font-weight:700;
-    color:var(--ink);
-    margin-bottom:6px;
-  }
-  .edit-btn-row{
-    display:flex;
-    gap:10px;
-    margin-top:12px;
-  }
-  .edit-btn-row .btn{margin-top:0;padding:12px;font-size:14px;}
+    .field-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 18px;
+      border-radius: 12px;
+      border: 2px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Noto Sans JP", sans-serif;
+      letter-spacing: 0.04em;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
 
-  /* ===== 社員マスタ編集 ===== */
-  .emp-list-head{
-    display:grid;
-    grid-template-columns:1fr 1.4fr auto;
-    gap:8px;
-    font-size:11px;
-    color:var(--ink-soft);
-    font-weight:700;
-    padding:0 0 8px;
-    border-bottom:2px solid var(--crate-dark);
-    margin-bottom:4px;
-  }
-  .emp-row{
-    display:grid;
-    grid-template-columns:1fr 1.4fr auto;
-    gap:8px;
-    align-items:center;
-    padding:8px 0;
-    border-bottom:1px solid var(--line);
-  }
-  .emp-row:last-child{border-bottom:none;}
-  .emp-row-no{font-size:13px;color:var(--ink-soft);font-weight:700;word-break:break-all;}
-  .emp-row-name{font-size:14px;font-weight:700;}
-  .emp-row-actions{display:flex;gap:6px;justify-content:flex-end;}
-  /* 編集中の行（インライン） */
-  .emp-edit-row{
-    background:var(--paper);
-    border:2px solid var(--tomato);
-    border-radius:12px;
-    padding:12px;
-    margin:6px 0;
-    display:grid;
-    grid-template-columns:1fr 1.4fr auto;
-    gap:8px;
-    align-items:center;
-  }
-  .emp-input{
-    padding:8px 10px;
-    font-size:13px;
-    border-radius:9px;
-    border:1.5px solid var(--line);
-    background:#fff;
-    color:var(--ink);
-    font-family:"Noto Sans JP", sans-serif;
-    outline:none;
-    width:100%;
-    transition:border-color 0.15s;
-  }
-  .emp-input:focus{border-color:var(--tomato);}
-  .emp-edit-actions{display:flex;gap:6px;justify-content:flex-end;}
-  /* 新規追加フォーム */
-  .emp-add-form{
-    display:grid;
-    grid-template-columns:1fr 1.4fr auto;
-    gap:8px;
-    align-items:center;
-    padding:12px;
-    background:rgba(76,122,82,0.06);
-    border:2px dashed var(--leaf);
-    border-radius:12px;
-    margin-top:12px;
-  }
-  .emp-add-btn{
-    padding:9px 12px;
-    font-size:13px;
-    font-weight:700;
-    color:#fff;
-    background:linear-gradient(180deg,var(--leaf),var(--leaf-dark));
-    border:none;
-    border-radius:9px;
-    cursor:pointer;
-    font-family:"Zen Maru Gothic", sans-serif;
-    white-space:nowrap;
-    box-shadow:0 4px 10px rgba(52,89,56,0.2);
-    transition:transform 0.08s,box-shadow 0.15s;
-  }
-  .emp-add-btn:active{transform:scale(0.96);}
-  .emp-error{
-    color:var(--tomato-dark);
-    font-size:12px;
-    font-weight:600;
-    grid-column:1/-1;
-    margin-top:2px;
-  }
-  /* タブ切り替え（社員リスト） */
-  .emp-tabs{
-    display:flex;
-    gap:6px;
-    margin-bottom:14px;
-  }
-  .emp-tab{
-    flex:1;
-    padding:9px 4px;
-    font-size:13px;
-    font-weight:700;
-    border-radius:10px;
-    border:2px solid var(--line);
-    background:#fff;
-    color:var(--ink-soft);
-    cursor:pointer;
-    font-family:"Noto Sans JP",sans-serif;
-    transition:background 0.12s,color 0.12s;
-  }
-  .emp-tab.active{
-    background:var(--leaf-dark);
-    color:#fff;
-    border-color:var(--leaf-dark);
-  }
-  .emp-search{
-    padding:10px 12px;
-    font-size:13px;
-    border-radius:10px;
-    border:1.5px solid var(--line);
-    background:var(--paper);
-    color:var(--ink);
-    font-family:"Noto Sans JP",sans-serif;
-    width:100%;
-    margin-bottom:12px;
-    outline:none;
-    transition:border-color 0.15s;
-  }
-  .emp-search:focus{border-color:var(--leaf);}
+    .field-input:focus {
+      border-color: var(--tomato);
+    }
 
-  /* 購入修正バナー */
-  .purchase-edit-hint{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    background:rgba(163,47,31,0.07);
-    border:1.5px solid rgba(163,47,31,0.2);
-    border-radius:10px;
-    padding:10px 14px;
-    font-size:12.5px;
-    color:var(--tomato-dark);
-    font-weight:600;
-    margin-bottom:12px;
-  }
+    .error-msg {
+      color: var(--tomato-dark);
+      font-size: 12.5px;
+      text-align: left;
+      margin: 6px 2px 0;
+      min-height: 16px;
+      font-weight: 500;
+    }
 
-  /* 折りたたみヘッダー */
-  .card-toggle-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    cursor:pointer;
-    user-select:none;
-  }
-  .toggle-icon{
-    font-size:13px;
-    font-weight:700;
-    color:var(--ink-soft);
-    background:var(--paper);
-    padding:4px 10px;
-    border-radius:12px;
-    border:1px solid var(--line);
-    transition:transform 0.2s ease;
-  }
-  .toggle-icon.open{
-    transform:rotate(180deg);
-  }
+    .btn {
+      border: none;
+      cursor: pointer;
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-weight: 700;
+      border-radius: 14px;
+      transition: transform 0.08s ease, box-shadow 0.15s ease;
+    }
 
-  .footnote{
-    text-align:center;
-    font-size:11.5px;
-    color:var(--ink-soft);
-    margin-top:6px;
-  }
+    .btn:active {
+      transform: scale(0.97);
+    }
 
-  @media (prefers-reduced-motion: reduce){
-    .stamp{animation:none; opacity:1; transform:scale(1) rotate(-14deg);}
-  }
-</style>
+    .btn-primary {
+      width: 100%;
+      padding: 15px;
+      margin-top: 18px;
+      font-size: 16px;
+      color: #fff;
+      background: linear-gradient(180deg, var(--tomato), var(--tomato-dark));
+      box-shadow: 0 8px 18px rgba(163, 47, 31, 0.28);
+    }
+
+    .btn-primary.admin-btn {
+      background: linear-gradient(180deg, var(--leaf), var(--leaf-dark));
+      box-shadow: 0 8px 18px rgba(52, 89, 56, 0.28);
+    }
+
+    .btn-primary.export-btn {
+      margin-top: 16px;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    /* ===== Main app ===== */
+    .topbar {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .topbar-title {
+      font-size: 19px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-user {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .user-chip {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--leaf-dark);
+    }
+
+    .user-chip.admin {
+      color: var(--tomato-dark);
+    }
+
+    .logout-link {
+      font-size: 12.5px;
+      color: var(--ink-soft);
+      text-decoration: underline;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      font-family: "Noto Sans JP", sans-serif;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stats-row.triple {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .stat-card {
+      background: var(--crate);
+      border-radius: 14px;
+      padding: 14px 14px;
+      border: 1px solid var(--crate-dark);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.15) 0 2px, transparent 2px 14px);
+      opacity: 0.5;
+    }
+
+    .stat-num {
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-size: 23px;
+      font-weight: 900;
+      color: var(--leaf-dark);
+      position: relative;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #6b5f4a;
+      font-weight: 700;
+      position: relative;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--line);
+      box-shadow: 0 6px 18px rgba(51, 42, 34, 0.05);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 900;
+      margin: 0 0 2px;
+    }
+
+    .card-sub {
+      font-size: 12.5px;
+      color: var(--ink-soft);
+      margin: 0 0 18px;
+    }
+
+    .size-block {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .size-block:last-of-type {
+      border-bottom: none;
+    }
+
+    .size-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .size-name {
+      font-weight: 700;
+      font-size: 14.5px;
+    }
+
+    .size-price {
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .step-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid var(--leaf);
+      background: #fff;
+      color: var(--leaf-dark);
+      font-size: 19px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-btn:active {
+      background: var(--leaf);
+      color: #fff;
+      transform: scale(0.94);
+    }
+
+    .step-value {
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    .subtotal-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 16px 0 6px;
+      padding-top: 10px;
+    }
+
+    .subtotal-label {
+      font-size: 13px;
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+
+    .subtotal-value {
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--tomato-dark);
+    }
+
+    .buy-btn {
+      width: 100%;
+      padding: 16px;
+      font-size: 17px;
+      color: #fff;
+      background: linear-gradient(180deg, var(--tomato), var(--tomato-dark));
+      box-shadow: 0 10px 20px rgba(163, 47, 31, 0.3);
+      margin-top: 10px;
+    }
+
+    /* ranking */
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .rank-row:last-child {
+      border-bottom: none;
+    }
+
+    .rank-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      font-family: "Zen Maru Gothic", sans-serif;
+      background: var(--paper);
+      color: var(--ink-soft);
+      flex-shrink: 0;
+    }
+
+    .rank-badge.gold {
+      background: #F3D28A;
+      color: #7A5A12;
+    }
+
+    .rank-badge.silver {
+      background: #E1E1E1;
+      color: #5B5B5B;
+    }
+
+    .rank-badge.bronze {
+      background: #E3B48C;
+      color: #7A4A22;
+    }
+
+    .rank-name {
+      flex: 1;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .rank-detail {
+      font-size: 11.5px;
+      color: var(--ink-soft);
+    }
+
+    .rank-amount {
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-weight: 900;
+      color: var(--tomato-dark);
+      font-size: 14.5px;
+      text-align: right;
+      min-width: 66px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px 8px;
+      color: var(--ink-soft);
+      font-size: 13.5px;
+    }
+
+    /* log */
+    .log-row {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13.5px;
+    }
+
+    .log-row:last-child {
+      border-bottom: none;
+    }
+
+    .log-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    .log-time {
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+
+    .log-amount {
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-weight: 900;
+      color: var(--tomato-dark);
+    }
+
+    .log-breakdown {
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+
+    /* stamp toast */
+    .toast-layer {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .stamp {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      border: 5px solid var(--tomato);
+      color: var(--tomato);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-weight: 900;
+      background: rgba(255, 255, 255, 0.92);
+      transform: scale(2.2) rotate(-14deg);
+      opacity: 0;
+      animation: stampIn 1.1s cubic-bezier(.2, 1.4, .4, 1) forwards;
+      box-shadow: 0 10px 30px rgba(163, 47, 31, 0.25);
+      text-align: center;
+    }
+
+    .stamp-big {
+      font-size: 26px;
+      line-height: 1.2;
+    }
+
+    .stamp-small {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      margin-top: 6px;
+    }
+
+    @keyframes stampIn {
+      0% {
+        opacity: 0;
+        transform: scale(2.2) rotate(-14deg);
+      }
+
+      35% {
+        opacity: 1;
+        transform: scale(0.94) rotate(-14deg);
+      }
+
+      45% {
+        transform: scale(1.05) rotate(-14deg);
+      }
+
+      60% {
+        transform: scale(1) rotate(-14deg);
+      }
+
+      82% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(1) rotate(-14deg);
+      }
+    }
+
+    .upload-box {
+      border: 2px dashed var(--crate-dark);
+      border-radius: 14px;
+      padding: 16px;
+      background: var(--paper);
+      text-align: center;
+    }
+
+    .upload-hint {
+      font-size: 11.5px;
+      color: var(--ink-soft);
+      margin: 0 0 12px;
+      line-height: 1.6;
+    }
+
+    .file-input {
+      font-family: "Noto Sans JP", sans-serif;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .upload-status {
+      margin-top: 12px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--leaf-dark);
+    }
+
+    .upload-status.error {
+      color: var(--tomato-dark);
+    }
+
+    .period-select {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 12px;
+      border: 2px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Noto Sans JP", sans-serif;
+      margin-bottom: 16px;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .payroll-row {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr 0.9fr 1fr;
+      gap: 6px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .payroll-row.head {
+      font-size: 11px;
+      color: var(--ink-soft);
+      font-weight: 700;
+      border-bottom: 2px solid var(--crate-dark);
+    }
+
+    .payroll-row.total {
+      border-bottom: none;
+      border-top: 2px solid var(--crate-dark);
+      font-weight: 900;
+      padding-top: 12px;
+    }
+
+    .payroll-row:last-child {
+      border-bottom: none;
+    }
+
+    .payroll-name {
+      font-weight: 700;
+    }
+
+    .payroll-num {
+      text-align: right;
+      color: var(--ink-soft);
+    }
+
+    .payroll-amount {
+      text-align: right;
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-weight: 900;
+      color: var(--tomato-dark);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 15px;
+      font-size: 15px;
+      color: var(--ink-soft);
+      background: #fff;
+      border: 2px solid var(--line);
+    }
+
+    .history-row {
+      display: grid;
+      grid-template-columns: 0.9fr 0.85fr 1fr 0.8fr 0.75fr;
+      gap: 6px;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 12.5px;
+    }
+
+    .history-row.head {
+      font-size: 11px;
+      color: var(--ink-soft);
+      font-weight: 700;
+      border-bottom: 2px solid var(--crate-dark);
+    }
+
+    .history-row:last-child {
+      border-bottom: none;
+    }
+
+    .history-date {
+      color: var(--ink-soft);
+    }
+
+    .history-name {
+      font-weight: 700;
+    }
+
+    .history-detail {
+      color: var(--ink-soft);
+    }
+
+    .history-amount {
+      text-align: right;
+      font-family: "Zen Maru Gothic", sans-serif;
+      font-weight: 900;
+      color: var(--tomato-dark);
+    }
+
+    .history-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: stretch;
+    }
+
+    .action-btn {
+      font-size: 10.5px;
+      padding: 4px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink-soft);
+      cursor: pointer;
+      font-family: "Noto Sans JP", sans-serif;
+    }
+
+    .action-btn.danger {
+      color: var(--tomato-dark);
+      border-color: rgba(163, 47, 31, 0.3);
+    }
+
+    .edit-panel {
+      background: var(--paper);
+      border: 2px solid var(--tomato);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 10px 0;
+    }
+
+    .edit-panel-head {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .edit-btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .edit-btn-row .btn {
+      margin-top: 0;
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    /* ===== 社員マスタ編集 ===== */
+    .emp-list-head {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr auto;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--ink-soft);
+      font-weight: 700;
+      padding: 0 0 8px;
+      border-bottom: 2px solid var(--crate-dark);
+      margin-bottom: 4px;
+    }
+
+    .emp-row {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .emp-row:last-child {
+      border-bottom: none;
+    }
+
+    .emp-row-no {
+      font-size: 13px;
+      color: var(--ink-soft);
+      font-weight: 700;
+      word-break: break-all;
+    }
+
+    .emp-row-name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .emp-row-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    /* 編集中の行（インライン） */
+    .emp-edit-row {
+      background: var(--paper);
+      border: 2px solid var(--tomato);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 6px 0;
+      display: grid;
+      grid-template-columns: 1fr 1.4fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .emp-input {
+      padding: 8px 10px;
+      font-size: 13px;
+      border-radius: 9px;
+      border: 1.5px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-family: "Noto Sans JP", sans-serif;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+
+    .emp-input:focus {
+      border-color: var(--tomato);
+    }
+
+    .emp-edit-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    /* 新規追加フォーム */
+    .emp-add-form {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 12px;
+      background: rgba(76, 122, 82, 0.06);
+      border: 2px dashed var(--leaf);
+      border-radius: 12px;
+      margin-top: 12px;
+    }
+
+    .emp-add-btn {
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(180deg, var(--leaf), var(--leaf-dark));
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      font-family: "Zen Maru Gothic", sans-serif;
+      white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(52, 89, 56, 0.2);
+      transition: transform 0.08s, box-shadow 0.15s;
+    }
+
+    .emp-add-btn:active {
+      transform: scale(0.96);
+    }
+
+    .emp-error {
+      color: var(--tomato-dark);
+      font-size: 12px;
+      font-weight: 600;
+      grid-column: 1/-1;
+      margin-top: 2px;
+    }
+
+    /* タブ切り替え（社員リスト） */
+    .emp-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .emp-tab {
+      flex: 1;
+      padding: 9px 4px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 10px;
+      border: 2px solid var(--line);
+      background: #fff;
+      color: var(--ink-soft);
+      cursor: pointer;
+      font-family: "Noto Sans JP", sans-serif;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .emp-tab.active {
+      background: var(--leaf-dark);
+      color: #fff;
+      border-color: var(--leaf-dark);
+    }
+
+    .emp-search {
+      padding: 10px 12px;
+      font-size: 13px;
+      border-radius: 10px;
+      border: 1.5px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Noto Sans JP", sans-serif;
+      width: 100%;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .emp-search:focus {
+      border-color: var(--leaf);
+    }
+
+    /* 購入修正バナー */
+    .purchase-edit-hint {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(163, 47, 31, 0.07);
+      border: 1.5px solid rgba(163, 47, 31, 0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      color: var(--tomato-dark);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    /* 折りたたみヘッダー */
+    .card-toggle-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-icon {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      background: var(--paper);
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      transition: transform 0.2s ease;
+    }
+
+    .toggle-icon.open {
+      transform: rotate(180deg);
+    }
+
+    .footnote {
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--ink-soft);
+      margin-top: 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stamp {
+        animation: none;
+        opacity: 1;
+        transform: scale(1) rotate(-14deg);
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<div id="root"></div>
+  <div id="root"></div>
 
-<script>
-(function(){
+  <script>
+    (function () {
 
-  var SMALL_PRICE = 50;     // 小玉トマト 1個あたり
-  var LARGE_PRICE = 100;    // 大玉トマト 1個あたり
-  var PACK5_PRICE = 100;    // 5個100円トマト 1セット(パック)あたり
-  var ADMIN_PASSCODE = "9999"; // 管理者パスコード
+      var SMALL_PRICE = 50;     // 小玉トマト 1個あたり
+      var LARGE_PRICE = 100;    // 大玉トマト 1個あたり
+      var PACK5_PRICE = 100;    // 5個100円トマト 1セット(パック)あたり
+      var ADMIN_PASSCODE = "9999"; // 管理者パスコード
 
-  var state = {
-    employeeNo: null,
-    isAdmin: false,
-    purchases: [],
-    employeeMaster: [],
-    loading: true,
-    small: 0,
-    large: 0,
-    pack5: 0,
-    loginMode: 'employee', // 'employee' | 'admin'
-    loginError: "",
-    showStamp: false,
-    lastEntry: null,
-    uploadMessage: "",
-    uploadError: false,
-    editingId: null,
-    editSmall: 0,
-    editLarge: 0,
-    editPack5: 0,
-    editError: "",
-    // 社員マスタ編集
-    isEmpCardOpen: false, // デフォルトで折りたたみ状態
-    empTab: 'list',      // 'list' | 'upload'
-    empSearch: '',       // 検索文字列
-    empEditingNo: null,  // 編集中の社員No.（null=なし）
-    empEditName: '',     // 編集中の名前入力値
-    empEditNoValue: '',  // 編集中のNo.入力値
-    empAddNo: '',        // 新規追加 No.
-    empAddName: '',      // 新規追加 名前
-    empAddError: ''      // 新規追加エラー
-  };
+      var state = {
+        employeeNo: null,
+        isAdmin: false,
+        purchases: [],
+        employeeMaster: [],
+        loading: true,
+        small: 0,
+        large: 0,
+        pack5: 0,
+        loginMode: 'employee', // 'employee' | 'admin'
+        loginError: "",
+        showStamp: false,
+        lastEntry: null,
+        uploadMessage: "",
+        uploadError: false,
+        editingId: null,
+        editSmall: 0,
+        editLarge: 0,
+        editPack5: 0,
+        editError: "",
+        // 社員マスタ編集
+        isEmpCardOpen: false, // デフォルトで折りたたみ状態
+        empTab: 'list',      // 'list' | 'upload'
+        empSearch: '',       // 検索文字列
+        empEditingNo: null,  // 編集中の社員No.（null=なし）
+        empEditName: '',     // 編集中の名前入力値
+        empEditNoValue: '',  // 編集中のNo.入力値
+        empAddNo: '',        // 新規追加 No.
+        empAddName: '',      // 新規追加 名前
+        empAddError: ''      // 新規追加エラー
+      };
 
-  function fmtTime(ts){
-    var d = new Date(ts);
-    var y = d.getFullYear(), mo = d.getMonth()+1, day = d.getDate();
-    var hh = String(d.getHours()).padStart(2,'0');
-    var mm = String(d.getMinutes()).padStart(2,'0');
-    return y+"/"+mo+"/"+day+" "+hh+":"+mm;
-  }
-  function fmtDate(ts){
-    var d = new Date(ts);
-    return d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate();
-  }
-
-  // ===== Firebase 初期化 =====
-  var firebaseConfig = {
-    apiKey: "AIzaSyD40aRoRY4M2_aE2LGE2Gw3gAO95ijhI38",
-    authDomain: "tomato-hanbai.firebaseapp.com",
-    databaseURL: "https://tomato-hanbai-default-rtdb.firebaseio.com",
-    projectId: "tomato-hanbai",
-    storageBucket: "tomato-hanbai.firebasestorage.app",
-    messagingSenderId: "634273555443",
-    appId: "1:634273555443:web:4a453ad3191eefb2376886"
-  };
-  firebase.initializeApp(firebaseConfig);
-  var db = firebase.database();
-
-  // ===== Firebase ストレージ関数 =====
-
-  function savePurchases(list){
-    // localStorageにもバックアップ保存（オフライン対応）
-    try{ localStorage.setItem('tomato-purchases-backup', JSON.stringify(list)); }catch(e){}
-    db.ref('purchases').set(list).catch(function(e){
-      console.error('purchases保存エラー:', e);
-    });
-  }
-
-  function saveEmployeeMaster(list){
-    // localStorageにもバックアップ保存
-    try{ localStorage.setItem('tomato-employee-master-backup', JSON.stringify(list)); }catch(e){}
-    db.ref('employeeMaster').set(list).catch(function(e){
-      console.error('employeeMaster保存エラー:', e);
-    });
-  }
-
-  // リアルタイムリスナー：別端末の変更を自動反映
-  function startListeners(){
-    // 購入履歴
-    db.ref('purchases').on('value', function(snapshot){
-      var val = snapshot.val();
-      // val は null（空）または配列
-      state.purchases = Array.isArray(val) ? val : (val ? Object.values(val) : []);
-      if(ensureIds(state.purchases)){
-        savePurchases(state.purchases);
+      function fmtTime(ts) {
+        var d = new Date(ts);
+        var y = d.getFullYear(), mo = d.getMonth() + 1, day = d.getDate();
+        var hh = String(d.getHours()).padStart(2, '0');
+        var mm = String(d.getMinutes()).padStart(2, '0');
+        return y + "/" + mo + "/" + day + " " + hh + ":" + mm;
       }
-      if(!state.loading) render();
-    }, function(e){
-      console.error('purchases読み込みエラー:', e);
-    });
+      function fmtDate(ts) {
+        var d = new Date(ts);
+        return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+      }
 
-    // 社員マスタ
-    db.ref('employeeMaster').on('value', function(snapshot){
-      var val = snapshot.val();
-      state.employeeMaster = Array.isArray(val) ? val : (val ? Object.values(val) : []);
-      if(!state.loading) render();
-    }, function(e){
-      console.error('employeeMaster読み込みエラー:', e);
-    });
-  }
+      // ===== Firebase 初期化 =====
+      var firebaseConfig = {
+        apiKey: "AIzaSyD40aRoRY4M2_aE2LGE2Gw3gAO95ijhI38",
+        authDomain: "tomato-hanbai.firebaseapp.com",
+        databaseURL: "https://tomato-hanbai-default-rtdb.firebaseio.com",
+        projectId: "tomato-hanbai",
+        storageBucket: "tomato-hanbai.firebasestorage.app",
+        messagingSenderId: "634273555443",
+        appId: "1:634273555443:web:4a453ad3191eefb2376886"
+      };
+      firebase.initializeApp(firebaseConfig);
+      var db = firebase.database();
 
-  function getEmployeeName(no){
-    var found = state.employeeMaster.filter(function(e){ return e.employeeNo === no; })[0];
-    return found && found.name ? found.name : null;
-  }
+      // ===== Firebase ストレージ関数 =====
 
-  function displayName(no){
-    var name = getEmployeeName(no);
-    return name ? name : no;
-  }
-
-  function handleFileUpload(file){
-    if(typeof XLSX === 'undefined'){
-      state.uploadMessage = '読み込み用ライブラリを読み込めませんでした。通信環境をご確認ください';
-      state.uploadError = true;
-      render();
-      return;
-    }
-    var reader = new FileReader();
-    reader.onload = async function(e){
-      try{
-        var data = e.target.result;
-        var wb = XLSX.read(data, {type:'binary'});
-        var ws = wb.Sheets[wb.SheetNames[0]];
-        var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-        var list = [];
-        rows.forEach(function(row, idx){
-          if(idx === 0) return; // 1行目は見出し行として無視
-          var no = String(row[0] || '').trim();
-          var name = String(row[1] || '').trim();
-          if(no) list.push({employeeNo: no, name: name});
+      function savePurchases(list) {
+        // localStorageにもバックアップ保存（オフライン対応）
+        try { localStorage.setItem('tomato-purchases-backup', JSON.stringify(list)); } catch (e) { }
+        db.ref('purchases').set(list).catch(function (e) {
+          console.error('purchases保存エラー:', e);
         });
-        if(list.length === 0){
-          state.uploadMessage = '有効なデータが見つかりませんでした。1列目:社員No. / 2列目:氏名 の形式か確認してください';
+      }
+
+      function saveEmployeeMaster(list) {
+        // localStorageにもバックアップ保存
+        try { localStorage.setItem('tomato-employee-master-backup', JSON.stringify(list)); } catch (e) { }
+        db.ref('employeeMaster').set(list).catch(function (e) {
+          console.error('employeeMaster保存エラー:', e);
+        });
+      }
+
+      // リアルタイムリスナー：別端末の変更を自動反映
+      function startListeners() {
+        // 購入履歴
+        db.ref('purchases').on('value', function (snapshot) {
+          var val = snapshot.val();
+          // val は null（空）または配列
+          state.purchases = Array.isArray(val) ? val : (val ? Object.values(val) : []);
+          if (ensureIds(state.purchases)) {
+            savePurchases(state.purchases);
+          }
+          if (!state.loading) render();
+        }, function (e) {
+          console.error('purchases読み込みエラー:', e);
+        });
+
+        // 社員マスタ
+        db.ref('employeeMaster').on('value', function (snapshot) {
+          var val = snapshot.val();
+          state.employeeMaster = Array.isArray(val) ? val : (val ? Object.values(val) : []);
+          if (!state.loading) render();
+        }, function (e) {
+          console.error('employeeMaster読み込みエラー:', e);
+        });
+      }
+
+      function getEmployeeName(no) {
+        var found = state.employeeMaster.filter(function (e) { return e.employeeNo === no; })[0];
+        return found && found.name ? found.name : null;
+      }
+
+      function displayName(no) {
+        var name = getEmployeeName(no);
+        return name ? name : no;
+      }
+
+      function handleFileUpload(file) {
+        if (typeof XLSX === 'undefined') {
+          state.uploadMessage = '読み込み用ライブラリを読み込めませんでした。通信環境をご確認ください';
           state.uploadError = true;
           render();
           return;
         }
-        state.employeeMaster = list;
-        state.uploadMessage = list.length + '件の社員リストを読み込みました';
-        state.uploadError = false;
-        render();
-        await saveEmployeeMaster(list);
-      }catch(err){
-        state.uploadMessage = '読み込みに失敗しました。ファイル形式を確認してください';
-        state.uploadError = true;
-        render();
-      }
-    };
-    reader.readAsBinaryString(file);
-  }
-
-  function amountOf(p){
-    return (p.small || 0) * SMALL_PRICE + (p.large || 0) * LARGE_PRICE + (p.pack5 || 0) * PACK5_PRICE;
-  }
-
-  function aggregate(purchases){
-    var map = {};
-    purchases.forEach(function(p){
-      if(!map[p.employeeNo]) map[p.employeeNo] = {employeeNo:p.employeeNo, small:0, large:0, pack5:0, amount:0};
-      map[p.employeeNo].small += (p.small || 0);
-      map[p.employeeNo].large += (p.large || 0);
-      map[p.employeeNo].pack5 += (p.pack5 || 0);
-      map[p.employeeNo].amount += amountOf(p);
-    });
-    var arr = Object.keys(map).map(function(k){ return map[k]; });
-    arr.sort(function(a,b){ return b.amount - a.amount; });
-    return arr;
-  }
-
-  // 給与天引き用の締め期間（21日〜翌月20日）を計算
-  function getPeriodForTimestamp(ts){
-    var d = new Date(ts);
-    var y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
-    var endY = y, endM = m;
-    if(day > 20){
-      endM = m + 1;
-      if(endM > 11){ endM = 0; endY = y + 1; }
-    }
-    var startM = endM - 1, startY = endY;
-    if(startM < 0){ startM = 11; startY = endY - 1; }
-    var startDate = new Date(startY, startM, 21, 0, 0, 0, 0);
-    var endDate = new Date(endY, endM, 20, 23, 59, 59, 999);
-    var key = endY + '-' + String(endM + 1).padStart(2, '0');
-    var label = endY + '年' + (endM + 1) + '月度（' + (startM + 1) + '/21〜' + (endM + 1) + '/20締め）';
-    return {key: key, label: label, startTs: startDate.getTime(), endTs: endDate.getTime()};
-  }
-
-  function buildPeriodList(purchases){
-    var map = {};
-    purchases.forEach(function(p){
-      var info = getPeriodForTimestamp(p.timestamp);
-      if(!map[info.key]) map[info.key] = info;
-    });
-    var current = getPeriodForTimestamp(Date.now());
-    if(!map[current.key]) map[current.key] = current;
-    var arr = Object.keys(map).map(function(k){ return map[k]; });
-    arr.sort(function(a,b){ return b.startTs - a.startTs; });
-    return arr;
-  }
-
-  function aggregateForPeriod(purchases, period){
-    var list = purchases.filter(function(p){ return p.timestamp >= period.startTs && p.timestamp <= period.endTs; });
-    return {list: list, agg: aggregate(list)};
-  }
-
-  function el(tag, attrs, children){
-    var e = document.createElement(tag);
-    attrs = attrs || {};
-    Object.keys(attrs).forEach(function(k){
-      if(k === 'class') e.className = attrs[k];
-      else if(k === 'text') e.textContent = attrs[k];
-      else if(k.indexOf('on') === 0) e.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
-      else e.setAttribute(k, attrs[k]);
-    });
-    (children||[]).forEach(function(c){ if(c) e.appendChild(c); });
-    return e;
-  }
-
-  function render(){
-    var root = document.getElementById('root');
-    root.innerHTML = '';
-    if(!state.employeeNo && !state.isAdmin){
-      root.appendChild(renderLogin());
-    } else if(state.isAdmin){
-      root.appendChild(renderAdmin());
-    } else {
-      root.appendChild(renderMain());
-      if(state.showStamp) root.appendChild(renderStamp());
-    }
-  }
-
-  function renderLogin(){
-    var wrap = el('div', {class:'login-screen'});
-    wrap.appendChild(el('div', {class:'login-badge', text:'🍅'}));
-    wrap.appendChild(el('h1', {class:'login-title display', text:'社内トマト購入'}));
-    wrap.appendChild(el('p', {class:'login-sub', text:'ログインしてください'}));
-
-    var card = el('div', {class:'login-card'});
-
-    var toggle = el('div', {class:'mode-toggle'});
-    var empTab = el('button', {class:'mode-btn' + (state.loginMode==='employee' ? ' active':''), text:'社員'});
-    var adminTab = el('button', {class:'mode-btn' + (state.loginMode==='admin' ? ' active':''), text:'管理者'});
-    empTab.addEventListener('click', function(){ state.loginMode='employee'; state.loginError=''; render(); });
-    adminTab.addEventListener('click', function(){ state.loginMode='admin'; state.loginError=''; render(); });
-    toggle.appendChild(empTab);
-    toggle.appendChild(adminTab);
-    card.appendChild(toggle);
-
-    if(state.loginMode === 'employee'){
-      card.appendChild(el('label', {class:'field-label', text:'社員No.'}));
-      var input = el('input', {
-        class:'field-input',
-        type:'text',
-        inputmode:'numeric',
-        placeholder:'例: 12345',
-        id:'empInput'
-      });
-      input.addEventListener('input', function(ev){
-        ev.target.value = ev.target.value.replace(/[^0-9]/g, '');
-      });
-      card.appendChild(input);
-      var err = el('p', {class:'error-msg', text: state.loginError});
-      card.appendChild(err);
-      var btn = el('button', {class:'btn btn-primary', text:'ログインする'});
-      btn.addEventListener('click', function(){ doEmployeeLogin(input.value); });
-      input.addEventListener('keydown', function(ev){ if(ev.key==='Enter') doEmployeeLogin(input.value); });
-      card.appendChild(btn);
-      setTimeout(function(){ input.focus(); }, 50);
-    } else {
-      card.appendChild(el('label', {class:'field-label', text:'管理者パスコード'}));
-      var pinInput = el('input', {
-        class:'field-input',
-        type:'password',
-        inputmode:'numeric',
-        placeholder:'パスコードを入力',
-        id:'pinInput'
-      });
-      pinInput.addEventListener('input', function(ev){
-        ev.target.value = ev.target.value.replace(/[^0-9]/g, '');
-      });
-      card.appendChild(pinInput);
-      var perr = el('p', {class:'error-msg', text: state.loginError});
-      card.appendChild(perr);
-      var abtn = el('button', {class:'btn btn-primary admin-btn', text:'管理者としてログイン'});
-      abtn.addEventListener('click', function(){ doAdminLogin(pinInput.value); });
-      pinInput.addEventListener('keydown', function(ev){ if(ev.key==='Enter') doAdminLogin(pinInput.value); });
-      card.appendChild(abtn);
-      setTimeout(function(){ pinInput.focus(); }, 50);
-    }
-
-    wrap.appendChild(card);
-    return wrap;
-  }
-
-  function doEmployeeLogin(val){
-    var v = (val||'').trim();
-    if(!v){
-      state.loginError = '社員No.を入力してください';
-      render();
-      return;
-    }
-    if(!/^[0-9]+$/.test(v)){
-      state.loginError = '半角数字のみで入力してください';
-      render();
-      return;
-    }
-    state.loginError = '';
-    state.employeeNo = v;
-    state.small = 0;
-    state.large = 0;
-    state.pack5 = 0;
-    render();
-  }
-
-  function doAdminLogin(val){
-    var v = (val||'').trim();
-    if(!v){
-      state.loginError = 'パスコードを入力してください';
-      render();
-      return;
-    }
-    if(!/^[0-9]+$/.test(v)){
-      state.loginError = '半角数字のみで入力してください';
-      render();
-      return;
-    }
-    if(v !== ADMIN_PASSCODE){
-      state.loginError = 'パスコードが違います';
-      render();
-      return;
-    }
-    state.loginError = '';
-    state.isAdmin = true;
-    render();
-  }
-
-  function renderMain(){
-    var wrap = el('div', {class:'wrap'});
-
-    var top = el('div', {class:'topbar'});
-    top.appendChild(el('div', {class:'topbar-title display', text:'🍅 社内トマト購入'}));
-    var userWrap = el('div', {class:'topbar-user'});
-    userWrap.appendChild(el('span', {class:'user-chip', text: displayName(state.employeeNo) + ' さん'}));
-    var logoutBtn = el('button', {class:'logout-link', text:'ログアウト'});
-    logoutBtn.addEventListener('click', function(){
-      state.employeeNo = null;
-      render();
-    });
-    userWrap.appendChild(logoutBtn);
-    top.appendChild(userWrap);
-    wrap.appendChild(top);
-
-    if(state.loading){
-      wrap.appendChild(el('div', {class:'empty-state', text:'読み込み中...'}));
-      return wrap;
-    }
-
-    var myPurchases = state.purchases.filter(function(p){ return p.employeeNo === state.employeeNo; });
-    var myTotalQty = myPurchases.reduce(function(s,p){ return s + (p.small||0) + (p.large||0) + (p.pack5||0); }, 0);
-    var myTotalAmount = myPurchases.reduce(function(s,p){ return s + amountOf(p); }, 0);
-
-    // stats
-    var statsRow = el('div', {class:'stats-row'});
-    var s1 = el('div', {class:'stat-card'});
-    s1.appendChild(el('div', {class:'stat-num display', text: myTotalQty + '点'}));
-    s1.appendChild(el('div', {class:'stat-label', text:'自分の購入点数'}));
-    var s2 = el('div', {class:'stat-card'});
-    s2.appendChild(el('div', {class:'stat-num display', text: myTotalAmount.toLocaleString() + '円'}));
-    s2.appendChild(el('div', {class:'stat-label', text:'自分の合計金額'}));
-    statsRow.appendChild(s1);
-    statsRow.appendChild(s2);
-    wrap.appendChild(statsRow);
-
-    // purchase card
-    var buyCard = el('div', {class:'card'});
-    buyCard.appendChild(el('h2', {class:'card-title display', text:'トマトを購入する'}));
-    buyCard.appendChild(el('p', {class:'card-sub', text:'種類ごとに個数・セット数を選んでください'}));
-
-    buyCard.appendChild(buildSizeBlock('小玉トマト', SMALL_PRICE, state.small, function(){
-      if(state.small>0){ state.small--; render(); }
-    }, function(){
-      state.small++; render();
-    }));
-    buyCard.appendChild(buildSizeBlock('大玉トマト', LARGE_PRICE, state.large, function(){
-      if(state.large>0){ state.large--; render(); }
-    }, function(){
-      state.large++; render();
-    }));
-    buyCard.appendChild(buildSizeBlock('5個100円トマト', PACK5_PRICE, state.pack5, function(){
-      if(state.pack5>0){ state.pack5--; render(); }
-    }, function(){
-      state.pack5++; render();
-    }, 'セット'));
-
-    var subtotal = state.small*SMALL_PRICE + state.large*LARGE_PRICE + state.pack5*PACK5_PRICE;
-    var subRow = el('div', {class:'subtotal-row'});
-    subRow.appendChild(el('span', {class:'subtotal-label', text:'小計'}));
-    subRow.appendChild(el('span', {class:'subtotal-value display', text: subtotal.toLocaleString() + '円'}));
-    buyCard.appendChild(subRow);
-
-    var buyBtn = el('button', {class:'btn buy-btn', text:'購入する'});
-    if(state.small===0 && state.large===0 && state.pack5===0) buyBtn.disabled = true;
-    buyBtn.addEventListener('click', handlePurchase);
-    buyCard.appendChild(buyBtn);
-    wrap.appendChild(buyCard);
-
-    // 締め日ごとの購入集計（自分の分）
-    var myPeriods = buildPeriodList(myPurchases);
-    if(!state.selectedMyPeriodKey || !myPeriods.some(function(p){ return p.key === state.selectedMyPeriodKey; })){
-      state.selectedMyPeriodKey = myPeriods[0].key;
-    }
-    var selectedMyPeriod = myPeriods.filter(function(p){ return p.key === state.selectedMyPeriodKey; })[0];
-    var myPeriodPurchases = myPurchases.filter(function(p){ return p.timestamp >= selectedMyPeriod.startTs && p.timestamp <= selectedMyPeriod.endTs; });
-    var myPeriodSmall = myPeriodPurchases.reduce(function(s,p){ return s+(p.small||0); }, 0);
-    var myPeriodLarge = myPeriodPurchases.reduce(function(s,p){ return s+(p.large||0); }, 0);
-    var myPeriodPack5 = myPeriodPurchases.reduce(function(s,p){ return s+(p.pack5||0); }, 0);
-    var myPeriodAmount = myPeriodPurchases.reduce(function(s,p){ return s+amountOf(p); }, 0);
-
-    var periodCard = el('div', {class:'card'});
-    periodCard.appendChild(el('h2', {class:'card-title display', text:'締め日ごとの購入集計'}));
-    periodCard.appendChild(el('p', {class:'card-sub', text: selectedMyPeriod.label}));
-
-    var mySelect = el('select', {class:'period-select'});
-    myPeriods.forEach(function(p){
-      var opt = el('option', {value: p.key, text: p.label});
-      if(p.key === state.selectedMyPeriodKey) opt.selected = true;
-      mySelect.appendChild(opt);
-    });
-    mySelect.addEventListener('change', function(){
-      state.selectedMyPeriodKey = mySelect.value;
-      render();
-    });
-    periodCard.appendChild(mySelect);
-
-    var myStatsRow = el('div', {class:'stats-row'});
-    var ms1 = el('div', {class:'stat-card'});
-    ms1.appendChild(el('div', {class:'stat-num display', text: myPeriodSmall + '個'}));
-    ms1.appendChild(el('div', {class:'stat-label', text:'小玉'}));
-    var ms2 = el('div', {class:'stat-card'});
-    ms2.appendChild(el('div', {class:'stat-num display', text: myPeriodLarge + '個'}));
-    ms2.appendChild(el('div', {class:'stat-label', text:'大玉'}));
-    var ms3 = el('div', {class:'stat-card'});
-    ms3.appendChild(el('div', {class:'stat-num display', text: myPeriodPack5 + '個'}));
-    ms3.appendChild(el('div', {class:'stat-label', text:'5個100円'}));
-    var ms4 = el('div', {class:'stat-card'});
-    ms4.appendChild(el('div', {class:'stat-num display', text: myPeriodAmount.toLocaleString() + '円'}));
-    ms4.appendChild(el('div', {class:'stat-label', text:'天引き予定額'}));
-    myStatsRow.appendChild(ms1);
-    myStatsRow.appendChild(ms2);
-    myStatsRow.appendChild(ms3);
-    myStatsRow.appendChild(ms4);
-    periodCard.appendChild(myStatsRow);
-
-    if(myPeriodPurchases.length === 0){
-      periodCard.appendChild(el('div', {class:'empty-state', text:'この期間の購入はありません'}));
-    }
-    wrap.appendChild(periodCard);
-
-    // my history
-    var logCard = el('div', {class:'card'});
-    logCard.appendChild(el('h2', {class:'card-title display', text:'自分の購入履歴'}));
-    logCard.appendChild(el('p', {class:'card-sub', text:'最新の購入から表示'}));
-    var recent = myPurchases.slice().sort(function(a,b){ return b.timestamp - a.timestamp; });
-    if(recent.length === 0){
-      logCard.appendChild(el('div', {class:'empty-state', text:'購入履歴はまだありません'}));
-    } else {
-      recent.forEach(function(p){
-        var r = el('div', {class:'log-row'});
-        var topRow = el('div', {class:'log-top'});
-        topRow.appendChild(el('span', {class:'log-time', text: fmtTime(p.timestamp)}));
-        topRow.appendChild(el('span', {class:'log-amount', text: amountOf(p).toLocaleString() + '円'}));
-        r.appendChild(topRow);
-        var parts = [];
-        if(p.small>0) parts.push('小玉 ' + p.small + '個');
-        if(p.large>0) parts.push('大玉 ' + p.large + '個');
-        if(p.pack5>0) parts.push('5個100円 ' + p.pack5 + '個');
-        r.appendChild(el('div', {class:'log-breakdown', text: parts.join(' / ')}));
-        logCard.appendChild(r);
-      });
-    }
-    wrap.appendChild(logCard);
-
-    return wrap;
-  }
-
-  function buildSizeBlock(name, price, qty, onMinus, onPlus, unit){
-    unit = unit || '個';
-    var block = el('div', {class:'size-block'});
-    var info = el('div', {class:'size-info'});
-    info.appendChild(el('div', {class:'size-name', text:name}));
-    info.appendChild(el('div', {class:'size-price', text: price + '円 / ' + unit}));
-    block.appendChild(info);
-    var stepper = el('div', {class:'stepper'});
-    var minusBtn = el('button', {class:'step-btn', text:'−'});
-    minusBtn.addEventListener('click', onMinus);
-    var valSpan = el('span', {class:'step-value display', text:String(qty)});
-    var plusBtn = el('button', {class:'step-btn', text:'＋'});
-    plusBtn.addEventListener('click', onPlus);
-    stepper.appendChild(minusBtn);
-    stepper.appendChild(valSpan);
-    stepper.appendChild(plusBtn);
-    block.appendChild(stepper);
-    return block;
-  }
-
-  function renderStamp(){
-    var layer = el('div', {class:'toast-layer'});
-    var stamp = el('div', {class:'stamp'});
-    stamp.appendChild(el('div', {class:'stamp-big', text:'購入完了'}));
-    var e = state.lastEntry;
-    var parts = [];
-    if(e){
-      if(e.small>0) parts.push('小玉' + e.small);
-      if(e.large>0) parts.push('大玉' + e.large);
-      if(e.pack5>0) parts.push('5個100円' + e.pack5);
-    }
-    stamp.appendChild(el('div', {class:'stamp-small', text: parts.join(' / ')}));
-    layer.appendChild(stamp);
-    return layer;
-  }
-
-  function handlePurchase(){
-    if(state.small===0 && state.large===0 && state.pack5===0) return;
-    var entry = {
-      id: 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8),
-      employeeNo: state.employeeNo,
-      small: state.small,
-      large: state.large,
-      pack5: state.pack5,
-      timestamp: Date.now()
-    };
-    var updated = state.purchases.concat([entry]);
-    state.purchases = updated;
-    state.lastEntry = entry;
-    state.showStamp = true;
-    state.small = 0;
-    state.large = 0;
-    state.pack5 = 0;
-    render();
-    savePurchases(updated);
-    setTimeout(function(){
-      state.showStamp = false;
-      render();
-    }, 1100);
-  }
-
-  function exportPayrollToExcel(period, purchasesInPeriod){
-    if(typeof XLSX === 'undefined'){
-      state.uploadMessage = 'ダウンロード用ライブラリを読み込めませんでした。通信環境をご確認ください';
-      state.uploadError = true;
-      render();
-      return;
-    }
-    // 期間内の日付一覧（21日〜翌月20日）を作成
-    var start = new Date(period.startTs);
-    var end = new Date(period.endTs);
-    var cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    var last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-    var dateKeys = [], dateLabels = [];
-    while(cur <= last){
-      dateKeys.push(cur.getFullYear() + '-' + (cur.getMonth()+1) + '-' + cur.getDate());
-      dateLabels.push((cur.getMonth()+1) + '/' + cur.getDate());
-      cur.setDate(cur.getDate() + 1);
-    }
-
-    // 社員ごと・日付ごとに購入数を集計（サイズ別の内訳も集計）
-    var employees = {};
-    purchasesInPeriod.forEach(function(p){
-      var d = new Date(p.timestamp);
-      var key = d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
-      if(!employees[p.employeeNo]){
-        employees[p.employeeNo] = {
-          employeeNo: p.employeeNo, perDate: {},
-          smallQty: 0, largeQty: 0, pack5Qty: 0, smallAmount: 0, largeAmount: 0, pack5Amount: 0,
-          totalQty: 0, totalAmount: 0
+        var reader = new FileReader();
+        reader.onload = async function (e) {
+          try {
+            var data = e.target.result;
+            var wb = XLSX.read(data, { type: 'binary' });
+            var ws = wb.Sheets[wb.SheetNames[0]];
+            var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            var list = [];
+            rows.forEach(function (row, idx) {
+              if (idx === 0) return; // 1行目は見出し行として無視
+              var no = String(row[0] || '').trim();
+              var name = String(row[1] || '').trim();
+              if (no) list.push({ employeeNo: no, name: name });
+            });
+            if (list.length === 0) {
+              state.uploadMessage = '有効なデータが見つかりませんでした。1列目:社員No. / 2列目:氏名 の形式か確認してください';
+              state.uploadError = true;
+              render();
+              return;
+            }
+            state.employeeMaster = list;
+            state.uploadMessage = list.length + '件の社員リストを読み込みました';
+            state.uploadError = false;
+            render();
+            await saveEmployeeMaster(list);
+          } catch (err) {
+            state.uploadMessage = '読み込みに失敗しました。ファイル形式を確認してください';
+            state.uploadError = true;
+            render();
+          }
         };
+        reader.readAsBinaryString(file);
       }
-      var e = employees[p.employeeNo];
-      var qty = (p.small||0) + (p.large||0) + (p.pack5||0);
-      e.perDate[key] = (e.perDate[key] || 0) + qty;
-      e.smallQty += (p.small||0);
-      e.largeQty += (p.large||0);
-      e.pack5Qty += (p.pack5||0);
-      e.smallAmount += (p.small||0) * SMALL_PRICE;
-      e.largeAmount += (p.large||0) * LARGE_PRICE;
-      e.pack5Amount += (p.pack5||0) * PACK5_PRICE;
-      e.totalQty += qty;
-      e.totalAmount += amountOf(p);
-    });
 
-    var empList = Object.keys(employees).map(function(k){ return employees[k]; });
-    empList.sort(function(a,b){ return b.totalAmount - a.totalAmount; });
-
-    var header = ['社員No.', '名前'].concat(dateLabels).concat([
-      '小玉個数', '小玉金額(円)', '大玉個数', '大玉金額(円)', '5個100円個数', '5個100円金額(円)', '合計点数', '合計金額(円)'
-    ]);
-    var rows = [header];
-    empList.forEach(function(e){
-      var row = [e.employeeNo, displayName(e.employeeNo)];
-      dateKeys.forEach(function(dk){ row.push(e.perDate[dk] || 0); });
-      row.push(e.smallQty, e.smallAmount, e.largeQty, e.largeAmount, e.pack5Qty, e.pack5Amount, e.totalQty, e.totalAmount);
-      rows.push(row);
-    });
-
-    var ws = XLSX.utils.aoa_to_sheet(rows);
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '給与天引き');
-    XLSX.writeFile(wb, '給与天引き_' + period.key + '.xlsx');
-  }
-
-  function buildHistoryRow(p){
-    if(state.editingId === p.id){
-      return buildHistoryEditPanel(p);
-    }
-    var r = el('div', {class:'history-row'});
-    r.appendChild(el('div', {class:'history-date', text: fmtDate(p.timestamp)}));
-    r.appendChild(el('div', {class:'history-name', text: displayName(p.employeeNo)}));
-    var parts = [];
-    if(p.small>0) parts.push('小玉' + p.small);
-    if(p.large>0) parts.push('大玉' + p.large);
-    if(p.pack5>0) parts.push('5個100円' + p.pack5);
-    r.appendChild(el('div', {class:'history-detail', text: parts.join(' / ')}));
-    r.appendChild(el('div', {class:'history-amount', text: amountOf(p).toLocaleString() + '円'}));
-
-    var actions = el('div', {class:'history-actions'});
-    var editBtn = el('button', {class:'action-btn', text:'編集'});
-    editBtn.addEventListener('click', function(){
-      state.editingId = p.id;
-      state.editSmall = p.small || 0;
-      state.editLarge = p.large || 0;
-      state.editPack5 = p.pack5 || 0;
-      state.editError = '';
-      render();
-    });
-    var delBtn = el('button', {class:'action-btn danger', text:'削除'});
-    delBtn.addEventListener('click', function(){ handleDeletePurchase(p.id); });
-    actions.appendChild(editBtn);
-    actions.appendChild(delBtn);
-    r.appendChild(actions);
-    return r;
-  }
-
-  function buildHistoryEditPanel(p){
-    var panel = el('div', {class:'edit-panel'});
-    panel.appendChild(el('div', {class:'edit-panel-head', text: fmtDate(p.timestamp) + '・' + displayName(p.employeeNo) + ' の購入を編集'}));
-
-    panel.appendChild(buildSizeBlock('小玉トマト', SMALL_PRICE, state.editSmall, function(){
-      if(state.editSmall > 0){ state.editSmall--; render(); }
-    }, function(){
-      state.editSmall++; render();
-    }));
-    panel.appendChild(buildSizeBlock('大玉トマト', LARGE_PRICE, state.editLarge, function(){
-      if(state.editLarge > 0){ state.editLarge--; render(); }
-    }, function(){
-      state.editLarge++; render();
-    }));
-    panel.appendChild(buildSizeBlock('5個100円トマト', PACK5_PRICE, state.editPack5, function(){
-      if(state.editPack5 > 0){ state.editPack5--; render(); }
-    }, function(){
-      state.editPack5++; render();
-    }, 'セット'));
-
-    if(state.editError){
-      panel.appendChild(el('p', {class:'error-msg', text: state.editError}));
-    }
-
-    var btnRow = el('div', {class:'edit-btn-row'});
-    var cancelBtn = el('button', {class:'btn btn-secondary', text:'キャンセル'});
-    cancelBtn.addEventListener('click', function(){
-      state.editingId = null;
-      state.editError = '';
-      render();
-    });
-    var saveBtn = el('button', {class:'btn btn-primary admin-btn', text:'保存する'});
-    saveBtn.addEventListener('click', function(){ handleSaveEdit(p.id); });
-    btnRow.appendChild(cancelBtn);
-    btnRow.appendChild(saveBtn);
-    panel.appendChild(btnRow);
-    return panel;
-  }
-
-  function handleSaveEdit(id){
-    if(state.editSmall === 0 && state.editLarge === 0 && state.editPack5 === 0){
-      state.editError = 'いずれかの商品を1つ以上にしてください（削除する場合は「削除」ボタンをご利用ください）';
-      render();
-      return;
-    }
-    var list = state.purchases.map(function(p){
-      if(p.id === id){
-        return Object.assign({}, p, {small: state.editSmall, large: state.editLarge, pack5: state.editPack5});
+      function amountOf(p) {
+        return (p.small || 0) * SMALL_PRICE + (p.large || 0) * LARGE_PRICE + (p.pack5 || 0) * PACK5_PRICE;
       }
-      return p;
-    });
-    state.purchases = list;
-    state.editingId = null;
-    state.editError = '';
-    render();
-    savePurchases(list);
-  }
 
-  function handleDeletePurchase(id){
-    if(!window.confirm('この購入記録を削除しますか？この操作は取り消せません。')) return;
-    var list = state.purchases.filter(function(p){ return p.id !== id; });
-    state.purchases = list;
-    render();
-    savePurchases(list);
-  }
-
-  // ===== 社員マスタ操作 =====
-
-  // 社員の追加
-  function handleAddEmployee(no, name){
-    state.empAddError = '';
-    if(!no){
-      state.empAddError = '社員No.を入力してください';
-      render(); return;
-    }
-    if(!name){
-      state.empAddError = '氏名を入力してください';
-      render(); return;
-    }
-    // 重複チェック
-    var exists = state.employeeMaster.some(function(e){ return e.employeeNo === no; });
-    if(exists){
-      state.empAddError = '社員No. "' + no + '" はすでに登録されています';
-      render(); return;
-    }
-    var list = state.employeeMaster.concat([{employeeNo: no, name: name}]);
-    state.employeeMaster = list;
-    state.empAddNo = '';
-    state.empAddName = '';
-    state.empAddError = '';
-    render();
-    saveEmployeeMaster(list);
-  }
-
-  // 社員の保存（編集）
-  function handleSaveEmployee(oldNo, newNo, newName){
-    if(!newNo){
-      // No.が空の場合は変えない
-      newNo = oldNo;
-    }
-    if(!newName){
-      state.empEditingNo = oldNo; // 再描画でエラー表示
-      render(); return;
-    }
-    // No.が変更された場合、重複チェック
-    if(newNo !== oldNo){
-      var dup = state.employeeMaster.some(function(e){ return e.employeeNo === newNo; });
-      if(dup){
-        render(); return;
-      }
-    }
-    var list = state.employeeMaster.map(function(e){
-      if(e.employeeNo === oldNo){
-        return {employeeNo: newNo, name: newName};
-      }
-      return e;
-    });
-    // No.が変更された場合、既存の購入履歴も更新
-    if(newNo !== oldNo){
-      var updatedPurchases = state.purchases.map(function(p){
-        if(p.employeeNo === oldNo) return Object.assign({}, p, {employeeNo: newNo});
-        return p;
-      });
-      state.purchases = updatedPurchases;
-      savePurchases(updatedPurchases);
-    }
-    state.employeeMaster = list;
-    state.empEditingNo = null;
-    render();
-    saveEmployeeMaster(list);
-  }
-
-  // 社員の削除
-  function handleDeleteEmployee(no){
-    var name = getEmployeeName(no) || no;
-    if(!window.confirm('「' + name + '」（No.' + no + '）を社員リストから削除しますか？\n購入履歴は残ります。')) return;
-    var list = state.employeeMaster.filter(function(e){ return e.employeeNo !== no; });
-    state.employeeMaster = list;
-    render();
-    saveEmployeeMaster(list);
-  }
-
-  function renderAdmin(){
-    var wrap = el('div', {class:'wrap'});
-
-    var top = el('div', {class:'topbar'});
-    top.appendChild(el('div', {class:'topbar-title display', text:'🍅 管理者ページ'}));
-    var userWrap = el('div', {class:'topbar-user'});
-    userWrap.appendChild(el('span', {class:'user-chip admin', text:'管理者'}));
-    var logoutBtn = el('button', {class:'logout-link', text:'ログアウト'});
-    logoutBtn.addEventListener('click', function(){
-      state.isAdmin = false;
-      render();
-    });
-    userWrap.appendChild(logoutBtn);
-    top.appendChild(userWrap);
-    wrap.appendChild(top);
-
-    if(state.loading){
-      wrap.appendChild(el('div', {class:'empty-state', text:'読み込み中...'}));
-      return wrap;
-    }
-
-    var purchases = state.purchases;
-    var agg = aggregate(purchases);
-    var totalSmall = purchases.reduce(function(s,p){ return s+(p.small||0); }, 0);
-    var totalLarge = purchases.reduce(function(s,p){ return s+(p.large||0); }, 0);
-    var totalPack5 = purchases.reduce(function(s,p){ return s+(p.pack5||0); }, 0);
-    var totalAmount = purchases.reduce(function(s,p){ return s+amountOf(p); }, 0);
-
-    var statsRow = el('div', {class:'stats-row', style:'grid-template-columns: 1fr 1fr 1fr 1fr;'});
-    var s1 = el('div', {class:'stat-card'});
-    s1.appendChild(el('div', {class:'stat-num display', text: totalSmall + '個'}));
-    s1.appendChild(el('div', {class:'stat-label', text:'小玉 合計'}));
-    var s2 = el('div', {class:'stat-card'});
-    s2.appendChild(el('div', {class:'stat-num display', text: totalLarge + '個'}));
-    s2.appendChild(el('div', {class:'stat-label', text:'大玉 合計'}));
-    var s3 = el('div', {class:'stat-card'});
-    s3.appendChild(el('div', {class:'stat-num display', text: totalPack5 + '個'}));
-    s3.appendChild(el('div', {class:'stat-label', text:'5個100円'}));
-    var s4 = el('div', {class:'stat-card'});
-    s4.appendChild(el('div', {class:'stat-num display', text: totalAmount.toLocaleString() + '円'}));
-    s4.appendChild(el('div', {class:'stat-label', text:'総売上'}));
-    statsRow.appendChild(s1);
-    statsRow.appendChild(s2);
-    statsRow.appendChild(s3);
-    statsRow.appendChild(s4);
-    wrap.appendChild(statsRow);
-
-    // ===== 社員マスタ編集カード =====
-    var empCard = el('div', {class:'card'});
-    
-    var toggleHead = el('div', {class:'card-toggle-head'});
-    var titleGroup = el('div', {});
-    titleGroup.appendChild(el('h2', {class:'card-title display', text:'社員マスタ管理'}));
-    titleGroup.appendChild(el('p', {class:'card-sub', style:'margin-bottom:0;', text: state.employeeMaster.length + '件登録済み（タップで開閉）'}));
-    toggleHead.appendChild(titleGroup);
-    toggleHead.appendChild(el('div', {class:'toggle-icon' + (state.isEmpCardOpen ? ' open' : ''), text: state.isEmpCardOpen ? '▲ 閉じる' : '▼ 開く'}));
-    
-    toggleHead.addEventListener('click', function(){
-      state.isEmpCardOpen = !state.isEmpCardOpen;
-      render();
-    });
-    empCard.appendChild(toggleHead);
-
-    if(state.isEmpCardOpen){
-      var bodyWrap = el('div', {style:'margin-top:16px;'});
-      
-      // タブ切り替え
-      var empTabs = el('div', {class:'emp-tabs'});
-      var tabList = el('button', {class:'emp-tab' + (state.empTab==='list'?' active':''), text:'一覧・編集'});
-      var tabUpload = el('button', {class:'emp-tab' + (state.empTab==='upload'?' active':''), text:'Excelで一括読込'});
-      tabList.addEventListener('click', function(){ state.empTab='list'; render(); });
-      tabUpload.addEventListener('click', function(){ state.empTab='upload'; render(); });
-      empTabs.appendChild(tabList);
-      empTabs.appendChild(tabUpload);
-      bodyWrap.appendChild(empTabs);
-
-      if(state.empTab === 'upload'){
-        // ---- Excelアップロードタブ ----
-        var box = el('div', {class:'upload-box'});
-        box.appendChild(el('p', {class:'upload-hint', text:'1列目：社員No. / 2列目：氏名（1行目は見出し行として無視されます）'}));
-        var fileInput = el('input', {class:'file-input', type:'file', accept:'.xlsx,.xls,.csv'});
-        fileInput.addEventListener('change', function(ev){
-          var file = ev.target.files[0];
-          if(file) handleFileUpload(file);
+      function aggregate(purchases) {
+        var map = {};
+        purchases.forEach(function (p) {
+          if (!map[p.employeeNo]) map[p.employeeNo] = { employeeNo: p.employeeNo, small: 0, large: 0, pack5: 0, amount: 0 };
+          map[p.employeeNo].small += (p.small || 0);
+          map[p.employeeNo].large += (p.large || 0);
+          map[p.employeeNo].pack5 += (p.pack5 || 0);
+          map[p.employeeNo].amount += amountOf(p);
         });
-        box.appendChild(fileInput);
-        var statusText = state.uploadMessage || (state.employeeMaster.length + '件を登録済み');
-        box.appendChild(el('p', {class:'upload-status' + (state.uploadError ? ' error' : ''), text: statusText}));
-        bodyWrap.appendChild(box);
-      } else {
-        // ---- 一覧・編集タブ ----
-        // 検索欄
-        var searchInput = el('input', {
-          class: 'emp-search',
-          type: 'text',
-          placeholder: '社員No.または氏名で検索…',
-          value: state.empSearch
+        var arr = Object.keys(map).map(function (k) { return map[k]; });
+        arr.sort(function (a, b) { return b.amount - a.amount; });
+        return arr;
+      }
+
+      // 給与天引き用の締め期間（21日〜翌月20日）を計算
+      function getPeriodForTimestamp(ts) {
+        var d = new Date(ts);
+        var y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+        var endY = y, endM = m;
+        if (day > 20) {
+          endM = m + 1;
+          if (endM > 11) { endM = 0; endY = y + 1; }
+        }
+        var startM = endM - 1, startY = endY;
+        if (startM < 0) { startM = 11; startY = endY - 1; }
+        var startDate = new Date(startY, startM, 21, 0, 0, 0, 0);
+        var endDate = new Date(endY, endM, 20, 23, 59, 59, 999);
+        var key = endY + '-' + String(endM + 1).padStart(2, '0');
+        var label = endY + '年' + (endM + 1) + '月度（' + (startM + 1) + '/21〜' + (endM + 1) + '/20締め）';
+        return { key: key, label: label, startTs: startDate.getTime(), endTs: endDate.getTime() };
+      }
+
+      function buildPeriodList(purchases) {
+        var map = {};
+        purchases.forEach(function (p) {
+          var info = getPeriodForTimestamp(p.timestamp);
+          if (!map[info.key]) map[info.key] = info;
         });
-        searchInput.addEventListener('input', function(){
-          state.empSearch = searchInput.value;
+        var current = getPeriodForTimestamp(Date.now());
+        if (!map[current.key]) map[current.key] = current;
+        var arr = Object.keys(map).map(function (k) { return map[k]; });
+        arr.sort(function (a, b) { return b.startTs - a.startTs; });
+        return arr;
+      }
+
+      function aggregateForPeriod(purchases, period) {
+        var list = purchases.filter(function (p) { return p.timestamp >= period.startTs && p.timestamp <= period.endTs; });
+        return { list: list, agg: aggregate(list) };
+      }
+
+      function el(tag, attrs, children) {
+        var e = document.createElement(tag);
+        attrs = attrs || {};
+        Object.keys(attrs).forEach(function (k) {
+          if (k === 'class') e.className = attrs[k];
+          else if (k === 'text') e.textContent = attrs[k];
+          else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
+          else e.setAttribute(k, attrs[k]);
+        });
+        (children || []).forEach(function (c) { if (c) e.appendChild(c); });
+        return e;
+      }
+
+      function render() {
+        var root = document.getElementById('root');
+        root.innerHTML = '';
+        if (!state.employeeNo && !state.isAdmin) {
+          root.appendChild(renderLogin());
+        } else if (state.isAdmin) {
+          root.appendChild(renderAdmin());
+        } else {
+          root.appendChild(renderMain());
+          if (state.showStamp) root.appendChild(renderStamp());
+        }
+      }
+
+      function renderLogin() {
+        var wrap = el('div', { class: 'login-screen' });
+        wrap.appendChild(el('div', { class: 'login-badge', text: '🍅' }));
+        wrap.appendChild(el('h1', { class: 'login-title display', text: '社内トマト購入' }));
+        wrap.appendChild(el('p', { class: 'login-sub', text: 'ログインしてください' }));
+
+        var card = el('div', { class: 'login-card' });
+
+        var toggle = el('div', { class: 'mode-toggle' });
+        var empTab = el('button', { class: 'mode-btn' + (state.loginMode === 'employee' ? ' active' : ''), text: '社員' });
+        var adminTab = el('button', { class: 'mode-btn' + (state.loginMode === 'admin' ? ' active' : ''), text: '管理者' });
+        empTab.addEventListener('click', function () { state.loginMode = 'employee'; state.loginError = ''; render(); });
+        adminTab.addEventListener('click', function () { state.loginMode = 'admin'; state.loginError = ''; render(); });
+        toggle.appendChild(empTab);
+        toggle.appendChild(adminTab);
+        card.appendChild(toggle);
+
+        if (state.loginMode === 'employee') {
+          card.appendChild(el('label', { class: 'field-label', text: '社員No.' }));
+          var input = el('input', {
+            class: 'field-input',
+            type: 'text',
+            inputmode: 'numeric',
+            placeholder: '例: 12345',
+            id: 'empInput'
+          });
+          input.addEventListener('input', function (ev) {
+            ev.target.value = ev.target.value.replace(/[^0-9]/g, '');
+          });
+          card.appendChild(input);
+          var err = el('p', { class: 'error-msg', text: state.loginError });
+          card.appendChild(err);
+          var btn = el('button', { class: 'btn btn-primary', text: 'ログインする' });
+          btn.addEventListener('click', function () { doEmployeeLogin(input.value); });
+          input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') doEmployeeLogin(input.value); });
+          card.appendChild(btn);
+          setTimeout(function () { input.focus(); }, 50);
+        } else {
+          card.appendChild(el('label', { class: 'field-label', text: '管理者パスコード' }));
+          var pinInput = el('input', {
+            class: 'field-input',
+            type: 'password',
+            inputmode: 'numeric',
+            placeholder: 'パスコードを入力',
+            id: 'pinInput'
+          });
+          pinInput.addEventListener('input', function (ev) {
+            ev.target.value = ev.target.value.replace(/[^0-9]/g, '');
+          });
+          card.appendChild(pinInput);
+          var perr = el('p', { class: 'error-msg', text: state.loginError });
+          card.appendChild(perr);
+          var abtn = el('button', { class: 'btn btn-primary admin-btn', text: '管理者としてログイン' });
+          abtn.addEventListener('click', function () { doAdminLogin(pinInput.value); });
+          pinInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') doAdminLogin(pinInput.value); });
+          card.appendChild(abtn);
+          setTimeout(function () { pinInput.focus(); }, 50);
+        }
+
+        wrap.appendChild(card);
+        return wrap;
+      }
+
+      function doEmployeeLogin(val) {
+        var v = (val || '').trim();
+        if (!v) {
+          state.loginError = '社員No.を入力してください';
+          render();
+          return;
+        }
+        if (!/^[0-9]+$/.test(v)) {
+          state.loginError = '半角数字のみで入力してください';
+          render();
+          return;
+        }
+        state.loginError = '';
+        state.employeeNo = v;
+        state.small = 0;
+        state.large = 0;
+        state.pack5 = 0;
+        render();
+      }
+
+      function doAdminLogin(val) {
+        var v = (val || '').trim();
+        if (!v) {
+          state.loginError = 'パスコードを入力してください';
+          render();
+          return;
+        }
+        if (!/^[0-9]+$/.test(v)) {
+          state.loginError = '半角数字のみで入力してください';
+          render();
+          return;
+        }
+        if (v !== ADMIN_PASSCODE) {
+          state.loginError = 'パスコードが違います';
+          render();
+          return;
+        }
+        state.loginError = '';
+        state.isAdmin = true;
+        render();
+      }
+
+      function renderMain() {
+        var wrap = el('div', { class: 'wrap' });
+
+        var top = el('div', { class: 'topbar' });
+        top.appendChild(el('div', { class: 'topbar-title display', text: '🍅 購入ページ' }));
+        var userWrap = el('div', { class: 'topbar-user' });
+        userWrap.appendChild(el('span', { class: 'user-chip', text: displayName(state.employeeNo) + ' さん' }));
+        var logoutBtn = el('button', { class: 'logout-link', text: 'ログアウト' });
+        logoutBtn.addEventListener('click', function () {
+          state.employeeNo = null;
           render();
         });
-        bodyWrap.appendChild(searchInput);
+        userWrap.appendChild(logoutBtn);
+        top.appendChild(userWrap);
+        wrap.appendChild(top);
 
-        // ヘッダー行
-        if(state.employeeMaster.length > 0){
-          var empHead = el('div', {class:'emp-list-head'});
-          empHead.appendChild(el('div', {text:'社員No.'}));
-          empHead.appendChild(el('div', {text:'氏名'}));
-          empHead.appendChild(el('div', {text:'操作'}));
-          bodyWrap.appendChild(empHead);
+        if (state.loading) {
+          wrap.appendChild(el('div', { class: 'empty-state', text: '読み込み中...' }));
+          return wrap;
         }
 
-        // 社員一覧
-        var query = state.empSearch.trim().toLowerCase();
-        var filtered = state.employeeMaster.filter(function(e){
-          if(!query) return true;
-          return e.employeeNo.toLowerCase().indexOf(query) >= 0 || (e.name||'').toLowerCase().indexOf(query) >= 0;
-        });
+        var myPurchases = state.purchases.filter(function (p) { return p.employeeNo === state.employeeNo; });
+        var myTotalQty = myPurchases.reduce(function (s, p) { return s + (p.small || 0) + (p.large || 0) + (p.pack5 || 0); }, 0);
+        var myTotalAmount = myPurchases.reduce(function (s, p) { return s + amountOf(p); }, 0);
 
-        if(state.employeeMaster.length === 0){
-          bodyWrap.appendChild(el('div', {class:'empty-state', text:'社員が登録されていません。下の「追加」フォームから登録してください。'}));
-        } else if(filtered.length === 0){
-          bodyWrap.appendChild(el('div', {class:'empty-state', text:'"' + state.empSearch + '" に一致する社員はいません'}));
+        // stats
+        var statsRow = el('div', { class: 'stats-row' });
+        var s1 = el('div', { class: 'stat-card' });
+        s1.appendChild(el('div', { class: 'stat-num display', text: myTotalQty + '点' }));
+        s1.appendChild(el('div', { class: 'stat-label', text: '自分の購入点数' }));
+        var s2 = el('div', { class: 'stat-card' });
+        s2.appendChild(el('div', { class: 'stat-num display', text: myTotalAmount.toLocaleString() + '円' }));
+        s2.appendChild(el('div', { class: 'stat-label', text: '自分の合計金額' }));
+        statsRow.appendChild(s1);
+        statsRow.appendChild(s2);
+        wrap.appendChild(statsRow);
+
+        // purchase card
+        var buyCard = el('div', { class: 'card' });
+        buyCard.appendChild(el('h2', { class: 'card-title display', text: 'トマトを購入する' }));
+        buyCard.appendChild(el('p', { class: 'card-sub', text: '種類ごとに個数・セット数を選んでください' }));
+
+        buyCard.appendChild(buildSizeBlock('小玉トマト', SMALL_PRICE, state.small, function () {
+          if (state.small > 0) { state.small--; render(); }
+        }, function () {
+          state.small++; render();
+        }));
+        buyCard.appendChild(buildSizeBlock('大玉トマト', LARGE_PRICE, state.large, function () {
+          if (state.large > 0) { state.large--; render(); }
+        }, function () {
+          state.large++; render();
+        }));
+        buyCard.appendChild(buildSizeBlock('5個100円トマト', PACK5_PRICE, state.pack5, function () {
+          if (state.pack5 > 0) { state.pack5--; render(); }
+        }, function () {
+          state.pack5++; render();
+        }, 'セット'));
+
+        var subtotal = state.small * SMALL_PRICE + state.large * LARGE_PRICE + state.pack5 * PACK5_PRICE;
+        var subRow = el('div', { class: 'subtotal-row' });
+        subRow.appendChild(el('span', { class: 'subtotal-label', text: '小計' }));
+        subRow.appendChild(el('span', { class: 'subtotal-value display', text: subtotal.toLocaleString() + '円' }));
+        buyCard.appendChild(subRow);
+
+        var buyBtn = el('button', { class: 'btn buy-btn', text: '購入する' });
+        if (state.small === 0 && state.large === 0 && state.pack5 === 0) buyBtn.disabled = true;
+        buyBtn.addEventListener('click', handlePurchase);
+        buyCard.appendChild(buyBtn);
+        wrap.appendChild(buyCard);
+
+        // 締め日ごとの購入集計（自分の分）
+        var myPeriods = buildPeriodList(myPurchases);
+        if (!state.selectedMyPeriodKey || !myPeriods.some(function (p) { return p.key === state.selectedMyPeriodKey; })) {
+          state.selectedMyPeriodKey = myPeriods[0].key;
+        }
+        var selectedMyPeriod = myPeriods.filter(function (p) { return p.key === state.selectedMyPeriodKey; })[0];
+        var myPeriodPurchases = myPurchases.filter(function (p) { return p.timestamp >= selectedMyPeriod.startTs && p.timestamp <= selectedMyPeriod.endTs; });
+        var myPeriodSmall = myPeriodPurchases.reduce(function (s, p) { return s + (p.small || 0); }, 0);
+        var myPeriodLarge = myPeriodPurchases.reduce(function (s, p) { return s + (p.large || 0); }, 0);
+        var myPeriodPack5 = myPeriodPurchases.reduce(function (s, p) { return s + (p.pack5 || 0); }, 0);
+        var myPeriodAmount = myPeriodPurchases.reduce(function (s, p) { return s + amountOf(p); }, 0);
+
+        var periodCard = el('div', { class: 'card' });
+        periodCard.appendChild(el('h2', { class: 'card-title display', text: '締め日ごとの購入集計' }));
+        periodCard.appendChild(el('p', { class: 'card-sub', text: selectedMyPeriod.label }));
+
+        var mySelect = el('select', { class: 'period-select' });
+        myPeriods.forEach(function (p) {
+          var opt = el('option', { value: p.key, text: p.label });
+          if (p.key === state.selectedMyPeriodKey) opt.selected = true;
+          mySelect.appendChild(opt);
+        });
+        mySelect.addEventListener('change', function () {
+          state.selectedMyPeriodKey = mySelect.value;
+          render();
+        });
+        periodCard.appendChild(mySelect);
+
+        var myStatsRow = el('div', { class: 'stats-row' });
+        var ms1 = el('div', { class: 'stat-card' });
+        ms1.appendChild(el('div', { class: 'stat-num display', text: myPeriodSmall + '個' }));
+        ms1.appendChild(el('div', { class: 'stat-label', text: '小玉' }));
+        var ms2 = el('div', { class: 'stat-card' });
+        ms2.appendChild(el('div', { class: 'stat-num display', text: myPeriodLarge + '個' }));
+        ms2.appendChild(el('div', { class: 'stat-label', text: '大玉' }));
+        var ms3 = el('div', { class: 'stat-card' });
+        ms3.appendChild(el('div', { class: 'stat-num display', text: myPeriodPack5 + '個' }));
+        ms3.appendChild(el('div', { class: 'stat-label', text: '5個100円' }));
+        var ms4 = el('div', { class: 'stat-card' });
+        ms4.appendChild(el('div', { class: 'stat-num display', text: myPeriodAmount.toLocaleString() + '円' }));
+        ms4.appendChild(el('div', { class: 'stat-label', text: '天引き予定額' }));
+        myStatsRow.appendChild(ms1);
+        myStatsRow.appendChild(ms2);
+        myStatsRow.appendChild(ms3);
+        myStatsRow.appendChild(ms4);
+        periodCard.appendChild(myStatsRow);
+
+        if (myPeriodPurchases.length === 0) {
+          periodCard.appendChild(el('div', { class: 'empty-state', text: 'この期間の購入はありません' }));
+        }
+        wrap.appendChild(periodCard);
+
+        // my history
+        var logCard = el('div', { class: 'card' });
+        logCard.appendChild(el('h2', { class: 'card-title display', text: '自分の購入履歴' }));
+        logCard.appendChild(el('p', { class: 'card-sub', text: '最新の購入から表示' }));
+        var recent = myPurchases.slice().sort(function (a, b) { return b.timestamp - a.timestamp; });
+        if (recent.length === 0) {
+          logCard.appendChild(el('div', { class: 'empty-state', text: '購入履歴はまだありません' }));
         } else {
-          filtered.forEach(function(emp){
-            if(state.empEditingNo === emp.employeeNo){
-              // --- インライン編集フォーム ---
-              var editRow = el('div', {class:'emp-edit-row'});
-              var noIn = el('input', {class:'emp-input', type:'text', placeholder:'社員No.', value: state.empEditNoValue});
-              noIn.addEventListener('input', function(){ state.empEditNoValue = noIn.value; });
-              var nameIn = el('input', {class:'emp-input', type:'text', placeholder:'氏名', value: state.empEditName});
-              nameIn.addEventListener('input', function(){ state.empEditName = nameIn.value; });
-              var eActions = el('div', {class:'emp-edit-actions'});
-              var saveEmpBtn = el('button', {class:'action-btn', text:'保存'});
-              saveEmpBtn.style.cssText = 'background:var(--leaf-dark);color:#fff;border-color:var(--leaf-dark);';
-              saveEmpBtn.addEventListener('click', function(){
-                handleSaveEmployee(emp.employeeNo, state.empEditNoValue.trim(), state.empEditName.trim());
-              });
-              var cancelEmpBtn = el('button', {class:'action-btn', text:'×'});
-              cancelEmpBtn.addEventListener('click', function(){
-                state.empEditingNo = null;
-                render();
-              });
-              eActions.appendChild(saveEmpBtn);
-              eActions.appendChild(cancelEmpBtn);
-              editRow.appendChild(noIn);
-              editRow.appendChild(nameIn);
-              editRow.appendChild(eActions);
-              bodyWrap.appendChild(editRow);
-            } else {
-              // --- 通常表示行 ---
-              var empRow = el('div', {class:'emp-row'});
-              empRow.appendChild(el('div', {class:'emp-row-no', text: emp.employeeNo}));
-              empRow.appendChild(el('div', {class:'emp-row-name', text: emp.name || '（未設定）'}));
-              var rowActs = el('div', {class:'emp-row-actions'});
-              var editEmpBtn = el('button', {class:'action-btn', text:'編集'});
-              editEmpBtn.addEventListener('click', (function(e){
-                return function(){
-                  state.empEditingNo = e.employeeNo;
-                  state.empEditNoValue = e.employeeNo;
-                  state.empEditName = e.name || '';
-                  render();
-                };
-              })(emp));
-              var delEmpBtn = el('button', {class:'action-btn danger', text:'削除'});
-              delEmpBtn.addEventListener('click', (function(e){
-                return function(){ handleDeleteEmployee(e.employeeNo); };
-              })(emp));
-              rowActs.appendChild(editEmpBtn);
-              rowActs.appendChild(delEmpBtn);
-              empRow.appendChild(rowActs);
-              bodyWrap.appendChild(empRow);
-            }
+          recent.forEach(function (p) {
+            var r = el('div', { class: 'log-row' });
+            var topRow = el('div', { class: 'log-top' });
+            topRow.appendChild(el('span', { class: 'log-time', text: fmtTime(p.timestamp) }));
+            topRow.appendChild(el('span', { class: 'log-amount', text: amountOf(p).toLocaleString() + '円' }));
+            r.appendChild(topRow);
+            var parts = [];
+            if (p.small > 0) parts.push('小玉 ' + p.small + '個');
+            if (p.large > 0) parts.push('大玉 ' + p.large + '個');
+            if (p.pack5 > 0) parts.push('5個100円 ' + p.pack5 + '個');
+            r.appendChild(el('div', { class: 'log-breakdown', text: parts.join(' / ') }));
+            logCard.appendChild(r);
           });
         }
+        wrap.appendChild(logCard);
 
-        // 新規追加フォーム
-        var addForm = el('div', {class:'emp-add-form'});
-        var addNoIn = el('input', {class:'emp-input', type:'text', placeholder:'社員No.', value: state.empAddNo});
-        addNoIn.addEventListener('input', function(){ state.empAddNo = addNoIn.value; });
-        var addNameIn = el('input', {class:'emp-input', type:'text', placeholder:'氏名', value: state.empAddName});
-        addNameIn.addEventListener('input', function(){ state.empAddName = addNameIn.value; });
-        var addBtn = el('button', {class:'emp-add-btn', text:'＋ 追加'});
-        addBtn.addEventListener('click', function(){
-          handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim());
-        });
-        addNoIn.addEventListener('keydown', function(ev){ if(ev.key==='Enter') addNameIn.focus(); });
-        addNameIn.addEventListener('keydown', function(ev){ if(ev.key==='Enter') handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim()); });
-        addForm.appendChild(addNoIn);
-        addForm.appendChild(addNameIn);
-        addForm.appendChild(addBtn);
-        if(state.empAddError){
-          addForm.appendChild(el('div', {class:'emp-error', text: state.empAddError}));
+        return wrap;
+      }
+
+      function buildSizeBlock(name, price, qty, onMinus, onPlus, unit) {
+        unit = unit || '個';
+        var block = el('div', { class: 'size-block' });
+        var info = el('div', { class: 'size-info' });
+        info.appendChild(el('div', { class: 'size-name', text: name }));
+        info.appendChild(el('div', { class: 'size-price', text: price + '円 / ' + unit }));
+        block.appendChild(info);
+        var stepper = el('div', { class: 'stepper' });
+        var minusBtn = el('button', { class: 'step-btn', text: '−' });
+        minusBtn.addEventListener('click', onMinus);
+        var valSpan = el('span', { class: 'step-value display', text: String(qty) });
+        var plusBtn = el('button', { class: 'step-btn', text: '＋' });
+        plusBtn.addEventListener('click', onPlus);
+        stepper.appendChild(minusBtn);
+        stepper.appendChild(valSpan);
+        stepper.appendChild(plusBtn);
+        block.appendChild(stepper);
+        return block;
+      }
+
+      function renderStamp() {
+        var layer = el('div', { class: 'toast-layer' });
+        var stamp = el('div', { class: 'stamp' });
+        stamp.appendChild(el('div', { class: 'stamp-big', text: '購入完了' }));
+        var e = state.lastEntry;
+        var parts = [];
+        if (e) {
+          if (e.small > 0) parts.push('小玉' + e.small);
+          if (e.large > 0) parts.push('大玉' + e.large);
+          if (e.pack5 > 0) parts.push('5個100円' + e.pack5);
         }
-        bodyWrap.appendChild(addForm);
+        stamp.appendChild(el('div', { class: 'stamp-small', text: parts.join(' / ') }));
+        layer.appendChild(stamp);
+        return layer;
       }
-      
-      empCard.appendChild(bodyWrap);
-    }
 
-    wrap.appendChild(empCard);
-
-    // 給与天引き集計（20日締め）
-    var periods = buildPeriodList(purchases);
-    if(!state.selectedPeriodKey || !periods.some(function(p){ return p.key === state.selectedPeriodKey; })){
-      state.selectedPeriodKey = periods[0].key;
-    }
-    var selectedPeriod = periods.filter(function(p){ return p.key === state.selectedPeriodKey; })[0];
-    var periodData = aggregateForPeriod(purchases, selectedPeriod);
-
-    var payrollCard = el('div', {class:'card'});
-    payrollCard.appendChild(el('h2', {class:'card-title display', text:'給与天引き集計'}));
-    payrollCard.appendChild(el('p', {class:'card-sub', text: selectedPeriod.label}));
-
-    var select = el('select', {class:'period-select'});
-    periods.forEach(function(p){
-      var opt = el('option', {value: p.key, text: p.label});
-      if(p.key === state.selectedPeriodKey) opt.selected = true;
-      select.appendChild(opt);
-    });
-    select.addEventListener('change', function(){
-      state.selectedPeriodKey = select.value;
-      render();
-    });
-    payrollCard.appendChild(select);
-
-    if(periodData.agg.length === 0){
-      payrollCard.appendChild(el('div', {class:'empty-state', text:'この期間の購入はありません'}));
-    } else {
-      var head = el('div', {class:'payroll-row head', style:'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;'});
-      head.appendChild(el('div', {text:'氏名'}));
-      head.appendChild(el('div', {class:'payroll-num', text:'小玉'}));
-      head.appendChild(el('div', {class:'payroll-num', text:'大玉'}));
-      head.appendChild(el('div', {class:'payroll-num', text:'5個100円'}));
-      head.appendChild(el('div', {class:'payroll-num', text:'天引き額'}));
-      payrollCard.appendChild(head);
-
-      var periodTotalAmount = 0;
-      periodData.agg.forEach(function(row){
-        periodTotalAmount += row.amount;
-        var r = el('div', {class:'payroll-row', style:'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;'});
-        var nameCell = el('div', {});
-        nameCell.appendChild(el('div', {class:'payroll-name', text: displayName(row.employeeNo)}));
-        nameCell.appendChild(el('div', {class:'rank-detail', text: 'No.' + row.employeeNo}));
-        r.appendChild(nameCell);
-        r.appendChild(el('div', {class:'payroll-num', text: (row.small||0) + '個'}));
-        r.appendChild(el('div', {class:'payroll-num', text: (row.large||0) + '個'}));
-        r.appendChild(el('div', {class:'payroll-num', text: (row.pack5||0) + '個'}));
-        r.appendChild(el('div', {class:'payroll-amount', text: row.amount.toLocaleString() + '円'}));
-        payrollCard.appendChild(r);
-      });
-
-      var totalRow = el('div', {class:'payroll-row total', style:'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;'});
-      totalRow.appendChild(el('div', {class:'payroll-name', text:'合計'}));
-      totalRow.appendChild(el('div', {class:'payroll-num'}));
-      totalRow.appendChild(el('div', {class:'payroll-num'}));
-      totalRow.appendChild(el('div', {class:'payroll-num'}));
-      totalRow.appendChild(el('div', {class:'payroll-amount', text: periodTotalAmount.toLocaleString() + '円'}));
-      payrollCard.appendChild(totalRow);
-
-      var exportBtn = el('button', {class:'btn btn-primary admin-btn export-btn', text:'Excelでダウンロード'});
-      exportBtn.addEventListener('click', function(){
-        exportPayrollToExcel(selectedPeriod, periodData.list);
-      });
-      payrollCard.appendChild(exportBtn);
-    }
-    wrap.appendChild(payrollCard);
-
-    // 全購入履歴（誰が何日にいくつ購入したか）
-    var historyCard = el('div', {class:'card'});
-    historyCard.appendChild(el('h2', {class:'card-title display', text:'全購入履歴'}));
-    historyCard.appendChild(el('p', {class:'card-sub', text:'全社員の購入を新しい順に表示'}));
-
-    // 購入編集ヒント
-    var editHint = el('div', {class:'purchase-edit-hint'});
-    editHint.appendChild(el('span', {text:'✏️'}));
-    editHint.appendChild(el('span', {text:'誤った購入は「編集」「削除」で修正できます'}));
-    historyCard.appendChild(editHint);
-
-    var allSorted = purchases.slice().sort(function(a,b){ return b.timestamp - a.timestamp; });
-    if(allSorted.length === 0){
-      historyCard.appendChild(el('div', {class:'empty-state', text:'まだ購入がありません'}));
-    } else {
-      var hHead = el('div', {class:'history-row head'});
-      hHead.appendChild(el('div', {text:'日付'}));
-      hHead.appendChild(el('div', {text:'氏名'}));
-      hHead.appendChild(el('div', {text:'内訳'}));
-      hHead.appendChild(el('div', {class:'history-amount', text:'金額'}));
-      hHead.appendChild(el('div', {text:''}));
-      historyCard.appendChild(hHead);
-
-      allSorted.forEach(function(p){
-        historyCard.appendChild(buildHistoryRow(p));
-      });
-    }
-    wrap.appendChild(historyCard);
-
-    // 全期間ランキング
-    var rankCard = el('div', {class:'card'});
-    rankCard.appendChild(el('h2', {class:'card-title display', text:'社員別ランキング（全期間）'}));
-    rankCard.appendChild(el('p', {class:'card-sub', text:'合計金額の多い順'}));
-    if(agg.length === 0){
-      rankCard.appendChild(el('div', {class:'empty-state', text:'まだ購入がありません'}));
-    } else {
-      agg.forEach(function(row, i){
-        var r = el('div', {class:'rank-row'});
-        var badgeClass = 'rank-badge' + (i===0?' gold':i===1?' silver':i===2?' bronze':'');
-        r.appendChild(el('div', {class:badgeClass, text:String(i+1)}));
-        var detail = el('div', {class:'rank-detail', text: 'No.' + row.employeeNo + ' ・ 小玉 ' + (row.small||0) + '個 / 大玉 ' + (row.large||0) + '個 / 5個100円 ' + (row.pack5||0) + '個'});
-        var nameCol = el('div', {style:'flex:1;'});
-        nameCol.appendChild(el('div', {class:'rank-name', text: displayName(row.employeeNo)}));
-        nameCol.appendChild(detail);
-        r.appendChild(nameCol);
-        r.appendChild(el('div', {class:'rank-amount', text: row.amount.toLocaleString() + '円'}));
-        rankCard.appendChild(r);
-      });
-    }
-    wrap.appendChild(rankCard);
-
-    wrap.appendChild(el('p', {class:'footnote', text:'このページは管理者のみアクセスできます'}));
-
-    return wrap;
-  }
-
-  function ensureIds(list){
-    var changed = false;
-    list.forEach(function(p){
-      if(!p.id){
-        p.id = 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
-        changed = true;
-      }
-    });
-    return changed;
-  }
-
-  function init(){
-    // まずローディング画面を表示
-    render();
-    // Firebaseリアルタイムリスナーを開始
-    // 初回データ取得後にloadingをfalseにしてレンダリング
-    var purchasesReady = false;
-    var masterReady = false;
-
-    function checkReady(){
-      if(purchasesReady && masterReady){
-        state.loading = false;
+      function handlePurchase() {
+        if (state.small === 0 && state.large === 0 && state.pack5 === 0) return;
+        var entry = {
+          id: 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+          employeeNo: state.employeeNo,
+          small: state.small,
+          large: state.large,
+          pack5: state.pack5,
+          timestamp: Date.now()
+        };
+        var updated = state.purchases.concat([entry]);
+        state.purchases = updated;
+        state.lastEntry = entry;
+        state.showStamp = true;
+        state.small = 0;
+        state.large = 0;
+        state.pack5 = 0;
         render();
+        savePurchases(updated);
+        setTimeout(function () {
+          state.showStamp = false;
+          render();
+        }, 1100);
       }
-    }
 
-    db.ref('purchases').on('value', function(snapshot){
-      var val = snapshot.val();
-      state.purchases = Array.isArray(val) ? val : (val ? Object.values(val) : []);
-      if(!purchasesReady){
-        purchasesReady = true;
-        checkReady();
-      } else {
-        if(!state.loading) render();
+      function exportPayrollToExcel(period, purchasesInPeriod) {
+        if (typeof XLSX === 'undefined') {
+          state.uploadMessage = 'ダウンロード用ライブラリを読み込めませんでした。通信環境をご確認ください';
+          state.uploadError = true;
+          render();
+          return;
+        }
+        // 期間内の日付一覧（21日〜翌月20日）を作成
+        var start = new Date(period.startTs);
+        var end = new Date(period.endTs);
+        var cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        var last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        var dateKeys = [], dateLabels = [];
+        while (cur <= last) {
+          dateKeys.push(cur.getFullYear() + '-' + (cur.getMonth() + 1) + '-' + cur.getDate());
+          dateLabels.push((cur.getMonth() + 1) + '/' + cur.getDate());
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        // 社員ごと・日付ごとに購入数を集計（サイズ別の内訳も集計）
+        var employees = {};
+        purchasesInPeriod.forEach(function (p) {
+          var d = new Date(p.timestamp);
+          var key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+          if (!employees[p.employeeNo]) {
+            employees[p.employeeNo] = {
+              employeeNo: p.employeeNo, perDate: {},
+              smallQty: 0, largeQty: 0, pack5Qty: 0, smallAmount: 0, largeAmount: 0, pack5Amount: 0,
+              totalQty: 0, totalAmount: 0
+            };
+          }
+          var e = employees[p.employeeNo];
+          var qty = (p.small || 0) + (p.large || 0) + (p.pack5 || 0);
+          e.perDate[key] = (e.perDate[key] || 0) + qty;
+          e.smallQty += (p.small || 0);
+          e.largeQty += (p.large || 0);
+          e.pack5Qty += (p.pack5 || 0);
+          e.smallAmount += (p.small || 0) * SMALL_PRICE;
+          e.largeAmount += (p.large || 0) * LARGE_PRICE;
+          e.pack5Amount += (p.pack5 || 0) * PACK5_PRICE;
+          e.totalQty += qty;
+          e.totalAmount += amountOf(p);
+        });
+
+        var empList = Object.keys(employees).map(function (k) { return employees[k]; });
+        empList.sort(function (a, b) { return b.totalAmount - a.totalAmount; });
+
+        var header = ['社員No.', '名前'].concat(dateLabels).concat([
+          '小玉個数', '小玉金額(円)', '大玉個数', '大玉金額(円)', '5個100円個数', '5個100円金額(円)', '合計点数', '合計金額(円)'
+        ]);
+        var rows = [header];
+        empList.forEach(function (e) {
+          var row = [e.employeeNo, displayName(e.employeeNo)];
+          dateKeys.forEach(function (dk) { row.push(e.perDate[dk] || 0); });
+          row.push(e.smallQty, e.smallAmount, e.largeQty, e.largeAmount, e.pack5Qty, e.pack5Amount, e.totalQty, e.totalAmount);
+          rows.push(row);
+        });
+
+        var ws = XLSX.utils.aoa_to_sheet(rows);
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '給与天引き');
+        XLSX.writeFile(wb, '給与天引き_' + period.key + '.xlsx');
       }
-    }, function(e){
-      console.error('purchases読み込みエラー:', e);
-      purchasesReady = true;
-      checkReady();
-    });
 
-    db.ref('employeeMaster').on('value', function(snapshot){
-      var val = snapshot.val();
-      state.employeeMaster = Array.isArray(val) ? val : (val ? Object.values(val) : []);
-      if(!masterReady){
-        masterReady = true;
-        checkReady();
-      } else {
-        if(!state.loading) render();
+      function buildHistoryRow(p) {
+        if (state.editingId === p.id) {
+          return buildHistoryEditPanel(p);
+        }
+        var r = el('div', { class: 'history-row' });
+        r.appendChild(el('div', { class: 'history-date', text: fmtDate(p.timestamp) }));
+        r.appendChild(el('div', { class: 'history-name', text: displayName(p.employeeNo) }));
+        var parts = [];
+        if (p.small > 0) parts.push('小玉' + p.small);
+        if (p.large > 0) parts.push('大玉' + p.large);
+        if (p.pack5 > 0) parts.push('5個100円' + p.pack5);
+        r.appendChild(el('div', { class: 'history-detail', text: parts.join(' / ') }));
+        r.appendChild(el('div', { class: 'history-amount', text: amountOf(p).toLocaleString() + '円' }));
+
+        var actions = el('div', { class: 'history-actions' });
+        var editBtn = el('button', { class: 'action-btn', text: '編集' });
+        editBtn.addEventListener('click', function () {
+          state.editingId = p.id;
+          state.editSmall = p.small || 0;
+          state.editLarge = p.large || 0;
+          state.editPack5 = p.pack5 || 0;
+          state.editError = '';
+          render();
+        });
+        var delBtn = el('button', { class: 'action-btn danger', text: '削除' });
+        delBtn.addEventListener('click', function () { handleDeletePurchase(p.id); });
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        r.appendChild(actions);
+        return r;
       }
-    }, function(e){
-      console.error('employeeMaster読み込みエラー:', e);
-      masterReady = true;
-      checkReady();
-    });
-  }
 
-  init();
-})();
-</script>
+      function buildHistoryEditPanel(p) {
+        var panel = el('div', { class: 'edit-panel' });
+        panel.appendChild(el('div', { class: 'edit-panel-head', text: fmtDate(p.timestamp) + '・' + displayName(p.employeeNo) + ' の購入を編集' }));
+
+        panel.appendChild(buildSizeBlock('小玉トマト', SMALL_PRICE, state.editSmall, function () {
+          if (state.editSmall > 0) { state.editSmall--; render(); }
+        }, function () {
+          state.editSmall++; render();
+        }));
+        panel.appendChild(buildSizeBlock('大玉トマト', LARGE_PRICE, state.editLarge, function () {
+          if (state.editLarge > 0) { state.editLarge--; render(); }
+        }, function () {
+          state.editLarge++; render();
+        }));
+        panel.appendChild(buildSizeBlock('5個100円トマト', PACK5_PRICE, state.editPack5, function () {
+          if (state.editPack5 > 0) { state.editPack5--; render(); }
+        }, function () {
+          state.editPack5++; render();
+        }, 'セット'));
+
+        if (state.editError) {
+          panel.appendChild(el('p', { class: 'error-msg', text: state.editError }));
+        }
+
+        var btnRow = el('div', { class: 'edit-btn-row' });
+        var cancelBtn = el('button', { class: 'btn btn-secondary', text: 'キャンセル' });
+        cancelBtn.addEventListener('click', function () {
+          state.editingId = null;
+          state.editError = '';
+          render();
+        });
+        var saveBtn = el('button', { class: 'btn btn-primary admin-btn', text: '保存する' });
+        saveBtn.addEventListener('click', function () { handleSaveEdit(p.id); });
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(saveBtn);
+        panel.appendChild(btnRow);
+        return panel;
+      }
+
+      function handleSaveEdit(id) {
+        if (state.editSmall === 0 && state.editLarge === 0 && state.editPack5 === 0) {
+          state.editError = 'いずれかの商品を1つ以上にしてください（削除する場合は「削除」ボタンをご利用ください）';
+          render();
+          return;
+        }
+        var list = state.purchases.map(function (p) {
+          if (p.id === id) {
+            return Object.assign({}, p, { small: state.editSmall, large: state.editLarge, pack5: state.editPack5 });
+          }
+          return p;
+        });
+        state.purchases = list;
+        state.editingId = null;
+        state.editError = '';
+        render();
+        savePurchases(list);
+      }
+
+      function handleDeletePurchase(id) {
+        if (!window.confirm('この購入記録を削除しますか？この操作は取り消せません。')) return;
+        var list = state.purchases.filter(function (p) { return p.id !== id; });
+        state.purchases = list;
+        render();
+        savePurchases(list);
+      }
+
+      // ===== 社員マスタ操作 =====
+
+      // 社員の追加
+      function handleAddEmployee(no, name) {
+        state.empAddError = '';
+        if (!no) {
+          state.empAddError = '社員No.を入力してください';
+          render(); return;
+        }
+        if (!name) {
+          state.empAddError = '氏名を入力してください';
+          render(); return;
+        }
+        // 重複チェック
+        var exists = state.employeeMaster.some(function (e) { return e.employeeNo === no; });
+        if (exists) {
+          state.empAddError = '社員No. "' + no + '" はすでに登録されています';
+          render(); return;
+        }
+        var list = state.employeeMaster.concat([{ employeeNo: no, name: name }]);
+        state.employeeMaster = list;
+        state.empAddNo = '';
+        state.empAddName = '';
+        state.empAddError = '';
+        render();
+        saveEmployeeMaster(list);
+      }
+
+      // 社員の保存（編集）
+      function handleSaveEmployee(oldNo, newNo, newName) {
+        if (!newNo) {
+          // No.が空の場合は変えない
+          newNo = oldNo;
+        }
+        if (!newName) {
+          state.empEditingNo = oldNo; // 再描画でエラー表示
+          render(); return;
+        }
+        // No.が変更された場合、重複チェック
+        if (newNo !== oldNo) {
+          var dup = state.employeeMaster.some(function (e) { return e.employeeNo === newNo; });
+          if (dup) {
+            render(); return;
+          }
+        }
+        var list = state.employeeMaster.map(function (e) {
+          if (e.employeeNo === oldNo) {
+            return { employeeNo: newNo, name: newName };
+          }
+          return e;
+        });
+        // No.が変更された場合、既存の購入履歴も更新
+        if (newNo !== oldNo) {
+          var updatedPurchases = state.purchases.map(function (p) {
+            if (p.employeeNo === oldNo) return Object.assign({}, p, { employeeNo: newNo });
+            return p;
+          });
+          state.purchases = updatedPurchases;
+          savePurchases(updatedPurchases);
+        }
+        state.employeeMaster = list;
+        state.empEditingNo = null;
+        render();
+        saveEmployeeMaster(list);
+      }
+
+      // 社員の削除
+      function handleDeleteEmployee(no) {
+        var name = getEmployeeName(no) || no;
+        if (!window.confirm('「' + name + '」（No.' + no + '）を社員リストから削除しますか？\n購入履歴は残ります。')) return;
+        var list = state.employeeMaster.filter(function (e) { return e.employeeNo !== no; });
+        state.employeeMaster = list;
+        render();
+        saveEmployeeMaster(list);
+      }
+
+      function renderAdmin() {
+        var wrap = el('div', { class: 'wrap' });
+
+        var top = el('div', { class: 'topbar' });
+        top.appendChild(el('div', { class: 'topbar-title display', text: '🍅 管理者ページ' }));
+        var userWrap = el('div', { class: 'topbar-user' });
+        userWrap.appendChild(el('span', { class: 'user-chip admin', text: '管理者' }));
+        var logoutBtn = el('button', { class: 'logout-link', text: 'ログアウト' });
+        logoutBtn.addEventListener('click', function () {
+          state.isAdmin = false;
+          render();
+        });
+        userWrap.appendChild(logoutBtn);
+        top.appendChild(userWrap);
+        wrap.appendChild(top);
+
+        if (state.loading) {
+          wrap.appendChild(el('div', { class: 'empty-state', text: '読み込み中...' }));
+          return wrap;
+        }
+
+        var purchases = state.purchases;
+        var agg = aggregate(purchases);
+        var totalSmall = purchases.reduce(function (s, p) { return s + (p.small || 0); }, 0);
+        var totalLarge = purchases.reduce(function (s, p) { return s + (p.large || 0); }, 0);
+        var totalPack5 = purchases.reduce(function (s, p) { return s + (p.pack5 || 0); }, 0);
+        var totalAmount = purchases.reduce(function (s, p) { return s + amountOf(p); }, 0);
+
+        var statsRow = el('div', { class: 'stats-row', style: 'grid-template-columns: 1fr 1fr 1fr 1fr;' });
+        var s1 = el('div', { class: 'stat-card' });
+        s1.appendChild(el('div', { class: 'stat-num display', text: totalSmall + '個' }));
+        s1.appendChild(el('div', { class: 'stat-label', text: '小玉 合計' }));
+        var s2 = el('div', { class: 'stat-card' });
+        s2.appendChild(el('div', { class: 'stat-num display', text: totalLarge + '個' }));
+        s2.appendChild(el('div', { class: 'stat-label', text: '大玉 合計' }));
+        var s3 = el('div', { class: 'stat-card' });
+        s3.appendChild(el('div', { class: 'stat-num display', text: totalPack5 + '個' }));
+        s3.appendChild(el('div', { class: 'stat-label', text: '5個100円' }));
+        var s4 = el('div', { class: 'stat-card' });
+        s4.appendChild(el('div', { class: 'stat-num display', text: totalAmount.toLocaleString() + '円' }));
+        s4.appendChild(el('div', { class: 'stat-label', text: '総売上' }));
+        statsRow.appendChild(s1);
+        statsRow.appendChild(s2);
+        statsRow.appendChild(s3);
+        statsRow.appendChild(s4);
+        wrap.appendChild(statsRow);
+
+        // ===== 社員マスタ編集カード =====
+        var empCard = el('div', { class: 'card' });
+
+        var toggleHead = el('div', { class: 'card-toggle-head' });
+        var titleGroup = el('div', {});
+        titleGroup.appendChild(el('h2', { class: 'card-title display', text: '社員マスタ管理' }));
+        titleGroup.appendChild(el('p', { class: 'card-sub', style: 'margin-bottom:0;', text: state.employeeMaster.length + '件登録済み（タップで開閉）' }));
+        toggleHead.appendChild(titleGroup);
+        toggleHead.appendChild(el('div', { class: 'toggle-icon' + (state.isEmpCardOpen ? ' open' : ''), text: state.isEmpCardOpen ? '▲ 閉じる' : '▼ 開く' }));
+
+        toggleHead.addEventListener('click', function () {
+          state.isEmpCardOpen = !state.isEmpCardOpen;
+          render();
+        });
+        empCard.appendChild(toggleHead);
+
+        if (state.isEmpCardOpen) {
+          var bodyWrap = el('div', { style: 'margin-top:16px;' });
+
+          // タブ切り替え
+          var empTabs = el('div', { class: 'emp-tabs' });
+          var tabList = el('button', { class: 'emp-tab' + (state.empTab === 'list' ? ' active' : ''), text: '一覧・編集' });
+          var tabUpload = el('button', { class: 'emp-tab' + (state.empTab === 'upload' ? ' active' : ''), text: 'Excelで一括読込' });
+          tabList.addEventListener('click', function () { state.empTab = 'list'; render(); });
+          tabUpload.addEventListener('click', function () { state.empTab = 'upload'; render(); });
+          empTabs.appendChild(tabList);
+          empTabs.appendChild(tabUpload);
+          bodyWrap.appendChild(empTabs);
+
+          if (state.empTab === 'upload') {
+            // ---- Excelアップロードタブ ----
+            var box = el('div', { class: 'upload-box' });
+            box.appendChild(el('p', { class: 'upload-hint', text: '1列目：社員No. / 2列目：氏名（1行目は見出し行として無視されます）' }));
+            var fileInput = el('input', { class: 'file-input', type: 'file', accept: '.xlsx,.xls,.csv' });
+            fileInput.addEventListener('change', function (ev) {
+              var file = ev.target.files[0];
+              if (file) handleFileUpload(file);
+            });
+            box.appendChild(fileInput);
+            var statusText = state.uploadMessage || (state.employeeMaster.length + '件を登録済み');
+            box.appendChild(el('p', { class: 'upload-status' + (state.uploadError ? ' error' : ''), text: statusText }));
+            bodyWrap.appendChild(box);
+          } else {
+            // ---- 一覧・編集タブ ----
+            // 検索欄
+            var searchInput = el('input', {
+              class: 'emp-search',
+              type: 'text',
+              placeholder: '社員No.または氏名で検索…',
+              value: state.empSearch
+            });
+            searchInput.addEventListener('input', function () {
+              state.empSearch = searchInput.value;
+              render();
+            });
+            bodyWrap.appendChild(searchInput);
+
+            // ヘッダー行
+            if (state.employeeMaster.length > 0) {
+              var empHead = el('div', { class: 'emp-list-head' });
+              empHead.appendChild(el('div', { text: '社員No.' }));
+              empHead.appendChild(el('div', { text: '氏名' }));
+              empHead.appendChild(el('div', { text: '操作' }));
+              bodyWrap.appendChild(empHead);
+            }
+
+            // 社員一覧
+            var query = state.empSearch.trim().toLowerCase();
+            var filtered = state.employeeMaster.filter(function (e) {
+              if (!query) return true;
+              return e.employeeNo.toLowerCase().indexOf(query) >= 0 || (e.name || '').toLowerCase().indexOf(query) >= 0;
+            });
+
+            if (state.employeeMaster.length === 0) {
+              bodyWrap.appendChild(el('div', { class: 'empty-state', text: '社員が登録されていません。下の「追加」フォームから登録してください。' }));
+            } else if (filtered.length === 0) {
+              bodyWrap.appendChild(el('div', { class: 'empty-state', text: '"' + state.empSearch + '" に一致する社員はいません' }));
+            } else {
+              filtered.forEach(function (emp) {
+                if (state.empEditingNo === emp.employeeNo) {
+                  // --- インライン編集フォーム ---
+                  var editRow = el('div', { class: 'emp-edit-row' });
+                  var noIn = el('input', { class: 'emp-input', type: 'text', placeholder: '社員No.', value: state.empEditNoValue });
+                  noIn.addEventListener('input', function () { state.empEditNoValue = noIn.value; });
+                  var nameIn = el('input', { class: 'emp-input', type: 'text', placeholder: '氏名', value: state.empEditName });
+                  nameIn.addEventListener('input', function () { state.empEditName = nameIn.value; });
+                  var eActions = el('div', { class: 'emp-edit-actions' });
+                  var saveEmpBtn = el('button', { class: 'action-btn', text: '保存' });
+                  saveEmpBtn.style.cssText = 'background:var(--leaf-dark);color:#fff;border-color:var(--leaf-dark);';
+                  saveEmpBtn.addEventListener('click', function () {
+                    handleSaveEmployee(emp.employeeNo, state.empEditNoValue.trim(), state.empEditName.trim());
+                  });
+                  var cancelEmpBtn = el('button', { class: 'action-btn', text: '×' });
+                  cancelEmpBtn.addEventListener('click', function () {
+                    state.empEditingNo = null;
+                    render();
+                  });
+                  eActions.appendChild(saveEmpBtn);
+                  eActions.appendChild(cancelEmpBtn);
+                  editRow.appendChild(noIn);
+                  editRow.appendChild(nameIn);
+                  editRow.appendChild(eActions);
+                  bodyWrap.appendChild(editRow);
+                } else {
+                  // --- 通常表示行 ---
+                  var empRow = el('div', { class: 'emp-row' });
+                  empRow.appendChild(el('div', { class: 'emp-row-no', text: emp.employeeNo }));
+                  empRow.appendChild(el('div', { class: 'emp-row-name', text: emp.name || '（未設定）' }));
+                  var rowActs = el('div', { class: 'emp-row-actions' });
+                  var editEmpBtn = el('button', { class: 'action-btn', text: '編集' });
+                  editEmpBtn.addEventListener('click', (function (e) {
+                    return function () {
+                      state.empEditingNo = e.employeeNo;
+                      state.empEditNoValue = e.employeeNo;
+                      state.empEditName = e.name || '';
+                      render();
+                    };
+                  })(emp));
+                  var delEmpBtn = el('button', { class: 'action-btn danger', text: '削除' });
+                  delEmpBtn.addEventListener('click', (function (e) {
+                    return function () { handleDeleteEmployee(e.employeeNo); };
+                  })(emp));
+                  rowActs.appendChild(editEmpBtn);
+                  rowActs.appendChild(delEmpBtn);
+                  empRow.appendChild(rowActs);
+                  bodyWrap.appendChild(empRow);
+                }
+              });
+            }
+
+            // 新規追加フォーム
+            var addForm = el('div', { class: 'emp-add-form' });
+            var addNoIn = el('input', { class: 'emp-input', type: 'text', placeholder: '社員No.', value: state.empAddNo });
+            addNoIn.addEventListener('input', function () { state.empAddNo = addNoIn.value; });
+            var addNameIn = el('input', { class: 'emp-input', type: 'text', placeholder: '氏名', value: state.empAddName });
+            addNameIn.addEventListener('input', function () { state.empAddName = addNameIn.value; });
+            var addBtn = el('button', { class: 'emp-add-btn', text: '＋ 追加' });
+            addBtn.addEventListener('click', function () {
+              handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim());
+            });
+            addNoIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') addNameIn.focus(); });
+            addNameIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') handleAddEmployee(state.empAddNo.trim(), state.empAddName.trim()); });
+            addForm.appendChild(addNoIn);
+            addForm.appendChild(addNameIn);
+            addForm.appendChild(addBtn);
+            if (state.empAddError) {
+              addForm.appendChild(el('div', { class: 'emp-error', text: state.empAddError }));
+            }
+            bodyWrap.appendChild(addForm);
+          }
+
+          empCard.appendChild(bodyWrap);
+        }
+
+        wrap.appendChild(empCard);
+
+        // 給与天引き集計（20日締め）
+        var periods = buildPeriodList(purchases);
+        if (!state.selectedPeriodKey || !periods.some(function (p) { return p.key === state.selectedPeriodKey; })) {
+          state.selectedPeriodKey = periods[0].key;
+        }
+        var selectedPeriod = periods.filter(function (p) { return p.key === state.selectedPeriodKey; })[0];
+        var periodData = aggregateForPeriod(purchases, selectedPeriod);
+
+        var payrollCard = el('div', { class: 'card' });
+        payrollCard.appendChild(el('h2', { class: 'card-title display', text: '給与天引き集計' }));
+        payrollCard.appendChild(el('p', { class: 'card-sub', text: selectedPeriod.label }));
+
+        var select = el('select', { class: 'period-select' });
+        periods.forEach(function (p) {
+          var opt = el('option', { value: p.key, text: p.label });
+          if (p.key === state.selectedPeriodKey) opt.selected = true;
+          select.appendChild(opt);
+        });
+        select.addEventListener('change', function () {
+          state.selectedPeriodKey = select.value;
+          render();
+        });
+        payrollCard.appendChild(select);
+
+        if (periodData.agg.length === 0) {
+          payrollCard.appendChild(el('div', { class: 'empty-state', text: 'この期間の購入はありません' }));
+        } else {
+          var head = el('div', { class: 'payroll-row head', style: 'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;' });
+          head.appendChild(el('div', { text: '氏名' }));
+          head.appendChild(el('div', { class: 'payroll-num', text: '小玉' }));
+          head.appendChild(el('div', { class: 'payroll-num', text: '大玉' }));
+          head.appendChild(el('div', { class: 'payroll-num', text: '5個100円' }));
+          head.appendChild(el('div', { class: 'payroll-num', text: '天引き額' }));
+          payrollCard.appendChild(head);
+
+          var periodTotalAmount = 0;
+          periodData.agg.forEach(function (row) {
+            periodTotalAmount += row.amount;
+            var r = el('div', { class: 'payroll-row', style: 'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;' });
+            var nameCell = el('div', {});
+            nameCell.appendChild(el('div', { class: 'payroll-name', text: displayName(row.employeeNo) }));
+            nameCell.appendChild(el('div', { class: 'rank-detail', text: 'No.' + row.employeeNo }));
+            r.appendChild(nameCell);
+            r.appendChild(el('div', { class: 'payroll-num', text: (row.small || 0) + '個' }));
+            r.appendChild(el('div', { class: 'payroll-num', text: (row.large || 0) + '個' }));
+            r.appendChild(el('div', { class: 'payroll-num', text: (row.pack5 || 0) + '個' }));
+            r.appendChild(el('div', { class: 'payroll-amount', text: row.amount.toLocaleString() + '円' }));
+            payrollCard.appendChild(r);
+          });
+
+          var totalRow = el('div', { class: 'payroll-row total', style: 'grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr 1.1fr;' });
+          totalRow.appendChild(el('div', { class: 'payroll-name', text: '合計' }));
+          totalRow.appendChild(el('div', { class: 'payroll-num' }));
+          totalRow.appendChild(el('div', { class: 'payroll-num' }));
+          totalRow.appendChild(el('div', { class: 'payroll-num' }));
+          totalRow.appendChild(el('div', { class: 'payroll-amount', text: periodTotalAmount.toLocaleString() + '円' }));
+          payrollCard.appendChild(totalRow);
+
+          var exportBtn = el('button', { class: 'btn btn-primary admin-btn export-btn', text: 'Excelでダウンロード' });
+          exportBtn.addEventListener('click', function () {
+            exportPayrollToExcel(selectedPeriod, periodData.list);
+          });
+          payrollCard.appendChild(exportBtn);
+        }
+        wrap.appendChild(payrollCard);
+
+        // 全購入履歴（誰が何日にいくつ購入したか）
+        var historyCard = el('div', { class: 'card' });
+        historyCard.appendChild(el('h2', { class: 'card-title display', text: '全購入履歴' }));
+        historyCard.appendChild(el('p', { class: 'card-sub', text: '全社員の購入を新しい順に表示' }));
+
+        // 購入編集ヒント
+        var editHint = el('div', { class: 'purchase-edit-hint' });
+        editHint.appendChild(el('span', { text: '✏️' }));
+        editHint.appendChild(el('span', { text: '誤った購入は「編集」「削除」で修正できます' }));
+        historyCard.appendChild(editHint);
+
+        var allSorted = purchases.slice().sort(function (a, b) { return b.timestamp - a.timestamp; });
+        if (allSorted.length === 0) {
+          historyCard.appendChild(el('div', { class: 'empty-state', text: 'まだ購入がありません' }));
+        } else {
+          var hHead = el('div', { class: 'history-row head' });
+          hHead.appendChild(el('div', { text: '日付' }));
+          hHead.appendChild(el('div', { text: '氏名' }));
+          hHead.appendChild(el('div', { text: '内訳' }));
+          hHead.appendChild(el('div', { class: 'history-amount', text: '金額' }));
+          hHead.appendChild(el('div', { text: '' }));
+          historyCard.appendChild(hHead);
+
+          allSorted.forEach(function (p) {
+            historyCard.appendChild(buildHistoryRow(p));
+          });
+        }
+        wrap.appendChild(historyCard);
+
+        // 全期間ランキング
+        var rankCard = el('div', { class: 'card' });
+        rankCard.appendChild(el('h2', { class: 'card-title display', text: '社員別ランキング（全期間）' }));
+        rankCard.appendChild(el('p', { class: 'card-sub', text: '合計金額の多い順' }));
+        if (agg.length === 0) {
+          rankCard.appendChild(el('div', { class: 'empty-state', text: 'まだ購入がありません' }));
+        } else {
+          agg.forEach(function (row, i) {
+            var r = el('div', { class: 'rank-row' });
+            var badgeClass = 'rank-badge' + (i === 0 ? ' gold' : i === 1 ? ' silver' : i === 2 ? ' bronze' : '');
+            r.appendChild(el('div', { class: badgeClass, text: String(i + 1) }));
+            var detail = el('div', { class: 'rank-detail', text: 'No.' + row.employeeNo + ' ・ 小玉 ' + (row.small || 0) + '個 / 大玉 ' + (row.large || 0) + '個 / 5個100円 ' + (row.pack5 || 0) + '個' });
+            var nameCol = el('div', { style: 'flex:1;' });
+            nameCol.appendChild(el('div', { class: 'rank-name', text: displayName(row.employeeNo) }));
+            nameCol.appendChild(detail);
+            r.appendChild(nameCol);
+            r.appendChild(el('div', { class: 'rank-amount', text: row.amount.toLocaleString() + '円' }));
+            rankCard.appendChild(r);
+          });
+        }
+        wrap.appendChild(rankCard);
+
+        wrap.appendChild(el('p', { class: 'footnote', text: 'このページは管理者のみアクセスできます' }));
+
+        return wrap;
+      }
+
+      function ensureIds(list) {
+        var changed = false;
+        list.forEach(function (p) {
+          if (!p.id) {
+            p.id = 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+            changed = true;
+          }
+        });
+        return changed;
+      }
+
+      function init() {
+        // まずローディング画面を表示
+        render();
+        // Firebaseリアルタイムリスナーを開始
+        // 初回データ取得後にloadingをfalseにしてレンダリング
+        var purchasesReady = false;
+        var masterReady = false;
+
+        function checkReady() {
+          if (purchasesReady && masterReady) {
+            state.loading = false;
+            render();
+          }
+        }
+
+        db.ref('purchases').on('value', function (snapshot) {
+          var val = snapshot.val();
+          state.purchases = Array.isArray(val) ? val : (val ? Object.values(val) : []);
+          if (!purchasesReady) {
+            purchasesReady = true;
+            checkReady();
+          } else {
+            if (!state.loading) render();
+          }
+        }, function (e) {
+          console.error('purchases読み込みエラー:', e);
+          purchasesReady = true;
+          checkReady();
+        });
+
+        db.ref('employeeMaster').on('value', function (snapshot) {
+          var val = snapshot.val();
+          state.employeeMaster = Array.isArray(val) ? val : (val ? Object.values(val) : []);
+          if (!masterReady) {
+            masterReady = true;
+            checkReady();
+          } else {
+            if (!state.loading) render();
+          }
+        }, function (e) {
+          console.error('employeeMaster読み込みエラー:', e);
+          masterReady = true;
+          checkReady();
+        });
+      }
+
+      init();
+    })();
+  </script>
 </body>
+
 </html>
