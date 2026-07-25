@@ -1314,6 +1314,7 @@
         }
         state.loginError = '';
         state.employeeNo = v;
+        try { localStorage.setItem('tomato-saved-employee-no', v); } catch (e) { }
         state.small = 0;
         state.large = 0;
         state.pack5 = 0;
@@ -1352,6 +1353,7 @@
         var logoutBtn = el('button', { class: 'logout-link', text: 'ログアウト' });
         logoutBtn.addEventListener('click', function () {
           state.employeeNo = null;
+          try { localStorage.removeItem('tomato-saved-employee-no'); } catch (e) { }
           render();
         });
         userWrap.appendChild(logoutBtn);
@@ -2127,6 +2129,14 @@
       }
 
       function init() {
+        // 保存された社員No.があれば自動ログイン状態にする
+        try {
+          var savedNo = localStorage.getItem('tomato-saved-employee-no');
+          if (savedNo) {
+            state.employeeNo = savedNo;
+          }
+        } catch (e) { }
+
         // まずローディング画面を表示
         render();
         // Firebaseリアルタイムリスナーを開始
