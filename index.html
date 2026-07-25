@@ -986,6 +986,9 @@
         placeholder:'例: 12345',
         id:'empInput'
       });
+      input.addEventListener('input', function(ev){
+        ev.target.value = ev.target.value.replace(/[^0-9]/g, '');
+      });
       card.appendChild(input);
       var err = el('p', {class:'error-msg', text: state.loginError});
       card.appendChild(err);
@@ -1002,6 +1005,9 @@
         inputmode:'numeric',
         placeholder:'パスコードを入力',
         id:'pinInput'
+      });
+      pinInput.addEventListener('input', function(ev){
+        ev.target.value = ev.target.value.replace(/[^0-9]/g, '');
       });
       card.appendChild(pinInput);
       var perr = el('p', {class:'error-msg', text: state.loginError});
@@ -1024,6 +1030,11 @@
       render();
       return;
     }
+    if(!/^[0-9]+$/.test(v)){
+      state.loginError = '半角数字のみで入力してください';
+      render();
+      return;
+    }
     state.loginError = '';
     state.employeeNo = v;
     state.small = 0;
@@ -1034,6 +1045,16 @@
 
   function doAdminLogin(val){
     var v = (val||'').trim();
+    if(!v){
+      state.loginError = 'パスコードを入力してください';
+      render();
+      return;
+    }
+    if(!/^[0-9]+$/.test(v)){
+      state.loginError = '半角数字のみで入力してください';
+      render();
+      return;
+    }
     if(v !== ADMIN_PASSCODE){
       state.loginError = 'パスコードが違います';
       render();
